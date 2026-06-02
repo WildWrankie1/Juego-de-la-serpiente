@@ -20,8 +20,11 @@
             touch-action: manipulation; 
         }
 
-        /* 🏆 Contenedor del Marcador Doble */
+        /* 🏆 Contenedor del Marcador y Botón Pausa */
         .score-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 20px;
             font-weight: bold;
             letter-spacing: 1px;
@@ -29,7 +32,6 @@
             text-transform: uppercase;
             text-shadow: 0 0 10px #00fff2;
             color: #00fff2;
-            text-align: center;
         }
 
         .high-score {
@@ -38,7 +40,27 @@
             margin-left: 15px;
         }
 
-        /* 🎮 El Lienzo Ajustado para Móviles */
+        /* Botón de Pausa Estilizado ⏸️ */
+        #pauseBtn {
+            background: none;
+            border: 2px solid #ff0055;
+            color: #ff0055;
+            border-radius: 8px;
+            padding: 2px 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 20px;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
+            transition: background-color 0.1s, transform 0.1s;
+        }
+        #pauseBtn:active {
+            background-color: #ff0055;
+            color: #fff;
+            box-shadow: 0 0 20px #ff0055;
+            transform: scale(0.9);
+        }
+
+        /* 🎮 El Lienzo Ajustado */
         canvas {
             background-color: #05050a;
             border: 4px solid #00ff88;
@@ -91,6 +113,7 @@
             margin-top: 10px;
             font-size: 12px;
             color: #555;
+            text-align: center;
         }
         @media (max-width: 600px) {
             .instructions { display: none; }
@@ -102,6 +125,7 @@
     <div class="score-container">
         <span>Puntos: <span id="scoreText">0</span></span>
         <span class="high-score">🏆 Récord: <span id="highScoreText">0</span></span>
+        <button id="pauseBtn" onclick="togglePausa()">⏸️</button>
     </div>
     
     <canvas id="gameCanvas" width="400" height="400"></canvas>
@@ -113,7 +137,7 @@
         <div class="btn" id="btn-down" onclick="cambiarDireccion('ArrowDown')">🔽</div>
     </div>
     
-    <div class="instructions">Usa las flechas del teclado en PC</div>
+    <div class="instructions">Usa las flechas para moverte | P o ESC para Pausa</div>
 
     <script>
 const canvas = document.getElementById('gameCanvas');
@@ -134,25 +158,93 @@ let actualDx = 20;
 let actualDy = 0;
 let puntuacion = 0;
 
-// 💾 CARGAR RÉCORD: Intenta buscar un récord guardado; si no existe, empieza en 0
-let recordMaximo = localStorage.getItem('snakeHighScore') ? parseInt(localStorage.getItem('snakeHighScore')) : 0;
-highScoreText.innerText = recordMaximo; // Lo muestra en la pantalla al cargar
+// 🕹️ NUEVO ESTADO AGREGADO: 'GAMEOVER'
+let estadoJuego = 'INICIO';
 
-// ⏱️ VELOCIDAD: Subido de 100ms a 130ms para que vaya un poco más lento al inicio
+let audioCtx = null;
+
+function iniciarAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+function sonarComer() {
+    iniciarAudio();
+    if (!audioCtx) return;
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.06);
+    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
+}
+
+function sonarGameOver() {
+    iniciarAudio();
+    if (!audioCtx) return;
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(250, audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.4);
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.4);
+}
+
+let recordMaximo = localStorage.getItem('snakeHighScore') ? parseInt(localStorage.getItem('snakeHighScore')) : 0;
+highScoreText.innerText = recordMaximo;
+
 setInterval(mostrarJuego, 130);
 document.addEventListener('keydown', cambiarDireccion);
 
+// 🔄 GAME LOOP PRINCIPAL
 function mostrarJuego() {
+    // 1. RENDERIZADO DE FONDO Y ELEMENTOS BASE
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#05050a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    dibujarManzana();
+    dibujarSerpiente();
+
+    // 🛑 FILTROS DE ESTADO DE JUEGO (Muestran pantallas y frenan el movimiento)
+    if (estadoJuego === 'INICIO') {
+        dibujarPantallaInicio();
+        return; 
+    }
+
+    if (estadoJuego === 'PAUSA') {
+        dibujarPantallaPausa();
+        return; 
+    }
+
+    if (estadoJuego === 'GAMEOVER') {
+        dibujarPantallaGameOver();
+        return; 
+    }
+
+    // 🏃‍♂️ LÓGICA DE MOVIMIENTO (Solo ocurre si el estado es 'JUGANDO')
     actualDx = dx;
     actualDy = dy;
     
     let newX = snake[0].x + dx;
     let newY = snake[0].y + dy;
 
+    // COMPROBAR CHOQUE CONTRA LOS BORDES REALES
     if (newX < 0 || newX >= 400 || newY < 0 || newY >= 400 || chocoConsigoMisma(newX, newY)) {
-        alert("¡Game Over! 😵 Puntuación final: " + puntuacion);
-        reiniciarJuego();
-        return;
+        sonarGameOver();
+        estadoJuego = 'GAMEOVER'; // Cambia el estado en vez de lanzar un alert molesto
+        return; // Detiene el código, dejando congelada a la serpiente EXACTAMENTE contra el borde
     }
 
     snake.unshift({ x: newX, y: newY });
@@ -160,33 +252,31 @@ function mostrarJuego() {
     if (newX === apple.x && newY === apple.y) {
         puntuacion += 10;
         scoreText.innerText = puntuacion;
+        sonarComer();
         
-        // 💾 COMPROBAR RÉCORD: Si superas la marca actual, se actualiza en vivo
         if (puntuacion > recordMaximo) {
             recordMaximo = puntuacion;
             highScoreText.innerText = recordMaximo;
-            localStorage.setItem('snakeHighScore', recordMaximo); // Lo guarda en la memoria del navegador
+            localStorage.setItem('snakeHighScore', recordMaximo);
         }
         
         generarNuevaManzana();
     } else {
         snake.pop();
     }
+}
 
-    // RENDERIZADO
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#05050a";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Manzana 🍎
+// 🎨 COMPONENTES DE DIBUJO
+function dibujarManzana() {
     ctx.shadowBlur = 15;
     ctx.shadowColor = "#ff0055";
     ctx.fillStyle = "#ff0055";
     ctx.beginPath();
     ctx.arc(apple.x + 10, apple.y + 10, 9, 0, 2 * Math.PI);
     ctx.fill();
+}
 
-    // Serpiente 🐍
+function dibujarSerpiente() {
     for (let i = 0; i < snake.length; i++) {
         if (i === 0) {
             ctx.fillStyle = "#00fff2"; 
@@ -195,17 +285,102 @@ function mostrarJuego() {
             ctx.fillStyle = "#00ff88";
             ctx.shadowColor = "#00ff88";
         }
+        ctx.shadowBlur = 15;
         ctx.fillRect(snake[i].x + 1, snake[i].y + 1, 18, 18);
     }
 }
 
+function dibujarPantallaInicio() {
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#00fff2";
+    ctx.fillStyle = "rgba(0, 255, 242, 0.12)";
+    ctx.fillRect(40, 150, 320, 100);
+    
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#00fff2";
+    ctx.font = "bold 16px 'Segoe UI', Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("PRESIONA CUALQUIER DIRECCIÓN", canvas.width / 2, 195);
+    ctx.fillText("O BOTÓN PARA EMPEZAR 🎮", canvas.width / 2, 225);
+}
+
+function dibujarPantallaPausa() {
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#ff0055";
+    ctx.fillStyle = "rgba(255, 0, 85, 0.15)";
+    ctx.fillRect(90, 165, 220, 70);
+    
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#ff0055";
+    ctx.font = "bold 24px 'Segoe UI', Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("JUEGO EN PAUSA", canvas.width / 2, 208);
+}
+
+// 🎨 NUEVO: Letrero elegante de Game Over integrado en el Canvas
+function dibujarPantallaGameOver() {
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#ff0055";
+    ctx.fillStyle = "rgba(255, 0, 85, 0.22)";
+    ctx.fillRect(40, 130, 320, 140);
+    
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#ff0055";
+    ctx.font = "bold 28px 'Segoe UI', Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("¡GAME OVER! 😵", canvas.width / 2, 175);
+    
+    ctx.fillStyle = "#fff";
+    ctx.font = "16px 'Segoe UI', Arial";
+    ctx.fillText("Puntuación final: " + puntuacion, canvas.width / 2, 215);
+    
+    ctx.font = "italic 13px 'Segoe UI', Arial";
+    ctx.fillStyle = "#888";
+    ctx.fillText("Pulsa cualquier botón para reiniciar", canvas.width / 2, 248);
+}
+
+// 🎮 CONTROLADOR DE DIRECCIÓN E INTERRUPTORES
 function cambiarDireccion(elemento) {
     const tecla = typeof elemento === 'string' ? elemento : elemento.key;
+
+    // 🔄 REINICIO INTEGRADO: Si perdimos, tocar cualquier botón limpia y arranca el juego
+    if (estadoJuego === 'GAMEOVER') {
+        reiniciarJuego();
+        estadoJuego = 'JUGANDO';
+        return;
+    }
+
+    if (estadoJuego === 'INICIO') {
+        if (['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) {
+            iniciarAudio();
+            estadoJuego = 'JUGANDO';
+        }
+    }
+
+    if (tecla === 'p' || tecla === 'P' || tecla === 'Escape') {
+        togglePausa();
+        return;
+    }
+
+    if (estadoJuego === 'PAUSA') return;
 
     if (tecla === 'ArrowLeft' && actualDx === 0)  { dx = -20; dy = 0; }
     if (tecla === 'ArrowUp' && actualDy === 0)    { dx = 0;   dy = -20; }
     if (tecla === 'ArrowRight' && actualDx === 0) { dx = 20;  dy = 0; }
     if (tecla === 'ArrowDown' && actualDy === 0)  { dx = 0;   dy = 20; }
+}
+
+function togglePausa() {
+    if (estadoJuego === 'INICIO' || estadoJuego === 'GAMEOVER') return; 
+    iniciarAudio();
+    
+    if (estadoJuego === 'JUGANDO') {
+        estadoJuego = 'PAUSA';
+        document.getElementById('pauseBtn').innerText = "▶️"; 
+    } else if (estadoJuego === 'PAUSA') {
+        estadoJuego = 'JUGANDO';
+        document.getElementById('pauseBtn').innerText = "⏸️"; 
+    }
 }
 
 function chocoConsigoMisma(x, y) {
@@ -233,6 +408,7 @@ function generarNuevaManzana() {
 function reiniciarJuego() {
     puntuacion = 0;
     scoreText.innerText = puntuacion;
+    document.getElementById('pauseBtn').innerText = "⏸️";
     snake = [
         { x: 160, y: 160 },
         { x: 140, y: 160 },
