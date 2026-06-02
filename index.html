@@ -2,48 +2,90 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Juego de la Serpiente 🐍</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Snake Neon Edition 🐍✨</title>
     <style>
+        /* 🌌 Fondo futurista */
         body {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             background: radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%);
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #fff;
             overflow: hidden;
+            /* Evita el rebote de la pantalla en móviles al deslizar */
+            touch-action: manipulation; 
         }
 
-        /* 🏆 Contenedor del Marcador exterior */
+        /* 🏆 Contenedor del Marcador */
         .score-container {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: bold;
             letter-spacing: 2px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             text-transform: uppercase;
             text-shadow: 0 0 10px #00fff2, 0 0 20px #00fff2;
             color: #00fff2;
         }
 
-        /* 🎮 El Lienzo con un marco brillante de neón */
+        /* 🎮 El Lienzo Ajustado para Móviles */
         canvas {
             background-color: #05050a;
             border: 4px solid #00ff88;
             border-radius: 10px;
-            box-shadow: 0 0 25px rgba(0, 255, 136, 0.5), 
-                        inset 0 0 20px rgba(0, 255, 136, 0.2);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.4);
+            max-width: 90vw; /* Se adapta si la pantalla es más pequeña que 400px */
+            max-height: 90vw;
         }
 
-        /* 💡 Pequeña nota de instrucciones estilizada */
+        /* 🕹️ Cruceta de Controles para el Móvil */
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            grid-template-rows: repeat(3, 70px);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            background-color: rgba(5, 5, 10, 0.8);
+            border: 2px solid #00fff2;
+            border-radius: 50%;
+            color: #00fff2;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 242, 0.3);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent; /* Quita el cuadro azul feo al tocar en móvil */
+        }
+
+        .btn:active {
+            background-color: #00fff2;
+            color: #05050a;
+            box-shadow: 0 0 20px #00fff2;
+        }
+
+        /* Posicionamiento de los botones en la rejilla */
+        #btn-up    { grid-column: 2; grid-row: 1; border-color: #00fff2; color: #00fff2; box-shadow: 0 0 10px rgba(0, 255, 242, 0.3); }
+        #btn-left  { grid-column: 1; grid-row: 2; border-color: #00fff2; color: #00fff2; box-shadow: 0 0 10px rgba(0, 255, 242, 0.3); }
+        #btn-right { grid-column: 3; grid-row: 2; border-color: #00fff2; color: #00fff2; box-shadow: 0 0 10px rgba(0, 255, 242, 0.3); }
+        #btn-down  { grid-column: 2; grid-row: 3; border-color: #00fff2; color: #00fff2; box-shadow: 0 0 10px rgba(0, 255, 242, 0.3); }
+
+        /* Ocultar las instrucciones en móviles para ahorrar espacio */
         .instructions {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #888;
-            letter-spacing: 1px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #555;
+        }
+        @media (max-width: 600px) {
+            .instructions { display: none; }
         }
     </style>
 </head>
@@ -53,151 +95,123 @@
     
     <canvas id="gameCanvas" width="400" height="400"></canvas>
     
-    <div class="instructions">Usa las flechas del teclado para dirigir la serpiente</div>
+    <div class="controls">
+        <div class="btn" id="btn-up" onclick="cambiarDireccion('ArrowUp')">⬆️</div>
+        <div class="btn" id="btn-left" onclick="cambiarDireccion('ArrowLeft')">⬅️</div>
+        <div class="btn" id="btn-right" onclick="cambiarDireccion('ArrowRight')">➡️</div>
+        <div class="btn" id="btn-down" onclick="cambiarDireccion('ArrowDown')">⬇️</div>
+    </div>
+    
+    <div class="instructions">Usa las flechas del teclado en PC</div>
 
     <script>
-// 🏁 Configuración inicial del lienzo (Canvas)
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+const scoreText = document.getElementById('scoreText');
 
-// 📦 El cuerpo de la serpiente (Array de objetos)
 let snake = [
     { x: 160, y: 160 },
     { x: 140, y: 160 },
     { x: 120, y: 160 }
 ];
 
-// 🍎 Posición inicial de la manzana
 let apple = { x: 300, y: 200 };
-
-// 🏃‍♂️ Variables de velocidad inicial (Moviéndose a la derecha)
 let dx = 20;
 let dy = 0;
 let actualDx = 20;
 let actualDy = 0;
 let puntuacion = 0;
 
-// ⏱️ El bucle del juego: ejecuta 'mostrarJuego' cada 100 milisegundos
 setInterval(mostrarJuego, 100);
 
-// ⌨️ Escuchador de eventos para el teclado
+// Escuchador para PC (pasa el evento completo)
 document.addEventListener('keydown', cambiarDireccion);
 
-// 🔄 FUNCIÓN PRINCIPAL (Game Loop)
 function mostrarJuego() {
-
     actualDx = dx;
     actualDy = dy;
     
-    // 1. Calcular la posición de la nueva cabeza 🆕
     let newX = snake[0].x + dx;
     let newY = snake[0].y + dy;
 
-    // 2. Condicionales 'if' para Game Over (Paredes o morderse) 🛑
     if (newX < 0 || newX >= 400 || newY < 0 || newY >= 400 || chocoConsigoMisma(newX, newY)) {
         alert("¡Game Over! 😵 Puntuación final: " + puntuacion);
         reiniciarJuego();
-        return; // Detiene la ejecución de este fotograma
+        return;
     }
 
-    // 3. Mover la serpiente en el array 🐍
-    snake.unshift({ x: newX, y: newY }); // Añade la nueva cabeza adelante
+    snake.unshift({ x: newX, y: newY });
 
-    // Condicional 'if' para comer la manzana 🍎
     if (newX === apple.x && newY === apple.y) {
-        puntuacion += 10;         // Sumamos 10 puntos
+        puntuacion += 10;
         scoreText.innerText = puntuacion;
-        generarNuevaManzana(); // Si come, NO hace .pop() para que crezca
+        generarNuevaManzana();
     } else {
-        snake.pop(); // Si no come, se mueve normal quitando la cola vieja
+        snake.pop();
     }
 
-    // 🖌️ RENDERIZADO ESTILIZADO
-
-    // 1. Fondo del Canvas (Efecto rejilla sutil de fondo de juego retro)
-    ctx.shadowBlur = 0; // Reset de brillos para el fondo
+    // 🖌️ RENDERIZADO
+    ctx.shadowBlur = 0;
     ctx.fillStyle = "#05050a";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // 2. Dibujar la manzana con brillo de neón rojo 🍎
+    // Manzana 🍎
     ctx.shadowBlur = 15;
     ctx.shadowColor = "#ff0055";
     ctx.fillStyle = "#ff0055";
-    // Dibujamos la manzana redonda en vez de un cuadrado tosco
     ctx.beginPath();
     ctx.arc(apple.x + 10, apple.y + 10, 9, 0, 2 * Math.PI);
     ctx.fill();
 
-    // 3. Dibujar la serpiente con brillo neón verde 🐍
-    ctx.shadowColor = "#00ff88";
-    
+    // Serpiente 🐍
     for (let i = 0; i < snake.length; i++) {
-        ctx.shadowBlur = 15;
-        
         if (i === 0) {
-            // La cabeza tiene un color ligeramente más brillante/azul para diferenciarla
             ctx.fillStyle = "#00fff2"; 
             ctx.shadowColor = "#00fff2";
         } else {
-            // El cuerpo es verde neón estándar
             ctx.fillStyle = "#00ff88";
             ctx.shadowColor = "#00ff88";
         }
-        
-        // Dibujamos los segmentos un pelín más pequeños (18px en espacio de 20px) 
-        // para dejar una cuadrícula elegante entre ellos
         ctx.fillRect(snake[i].x + 1, snake[i].y + 1, 18, 18);
     }
-}    
-    
-
-// 🎮 FUNCIÓN PARA CAMBIAR DE DIRECCIÓN
-function cambiarDireccion(event) {
-    // Evita que la serpiente gire 180 grados directamente sobre sí misma
-    if (event.key === 'ArrowLeft' && actualDx === 0)  { dx = -20; dy = 0; }
-    if (event.key === 'ArrowUp' && actualDy === 0)    { dx = 0;   dy = -20; }
-    if (event.key === 'ArrowRight' && actualDx === 0) { dx = 20;  dy = 0; }
-    if (event.key === 'ArrowDown' && actualDy === 0)  { dx = 0;   dy = 20; }
 }
 
-// 🧠 FUNCIONES AUXILIARES
+// 🎮 FUNCIÓN DE DIRECCIÓN ADAPTADA (Acepta teclado o texto directo)
+function cambiarDireccion(elemento) {
+    // Si viene del teclado usa 'elemento.key', si viene del botón móvil usa el texto directo
+    const tecla = typeof elemento === 'string' ? elemento : elemento.key;
 
-// Revisa si la nueva cabeza toca algún segmento del cuerpo
+    if (tecla === 'ArrowLeft' && actualDx === 0)  { dx = -20; dy = 0; }
+    if (tecla === 'ArrowUp' && actualDy === 0)    { dx = 0;   dy = -20; }
+    if (tecla === 'ArrowRight' && actualDx === 0) { dx = 20;  dy = 0; }
+    if (tecla === 'ArrowDown' && actualDy === 0)  { dx = 0;   dy = 20; }
+}
+
 function chocoConsigoMisma(x, y) {
     for (let i = 1; i < snake.length; i++) {
-        if (x === snake[i].x && y === snake[i].y) {
-            return true;
-        }
+        if (x === snake[i].x && y === snake[i].y) return true;
     }
     return false;
 }
 
-// Genera una manzana en una posición aleatoria alineada a la cuadrícula de 20px
 function generarNuevaManzana() {
     let encimaDeLaSerpiente = true;
-
-    // Se repetirá una y otra vez MIENTRAS la manzana caiga encima del cuerpo
     while (encimaDeLaSerpiente) {
-        // 1. Generamos una posición al azar
         apple.x = Math.floor(Math.random() * 20) * 20;
         apple.y = Math.floor(Math.random() * 20) * 20;
-
-        // 2. Asumimos temporalmente que la posición es buena (falsa alarma)
         encimaDeLaSerpiente = false;
-
-        // 3. Revisamos segmento por segmento si nuestra suposición era falsa
         for (let i = 0; i < snake.length; i++) {
             if (apple.x === snake[i].x && apple.y === snake[i].y) {
-                encimaDeLaSerpiente = true; // ¡Ups! Sí cayó encima.
-                break; // Rompe el 'for' para que el 'while' vuelva a generar otra coordenada
+                encimaDeLaSerpiente = true;
+                break;
             }
         }
     }
 }
 
-// Restablece los valores iniciales para empezar de nuevo
 function reiniciarJuego() {
     puntuacion = 0;
+    scoreText.innerText = puntuacion;
     snake = [
         { x: 160, y: 160 },
         { x: 140, y: 160 },
@@ -208,6 +222,5 @@ function reiniciarJuego() {
     generarNuevaManzana();
 }
     </script>
-    
 </body>
 </html>
