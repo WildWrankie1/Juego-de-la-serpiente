@@ -158,10 +158,13 @@ let actualDx = 20;
 let actualDy = 0;
 let puntuacion = 0;
 
-// 🕹️ NUEVO ESTADO AGREGADO: 'GAMEOVER'
 let estadoJuego = 'INICIO';
-
 let audioCtx = null;
+
+// ⚡ VARIABLES DE VELOCIDAD DINÁMICA
+const VELOCIDAD_INICIAL = 130;
+let velocidadActual = VELOCIDAD_INICIAL;
+let loopTimeoutToken = null; // Guardará el temporizador activo
 
 function iniciarAudio() {
     if (!audioCtx) {
@@ -204,12 +207,19 @@ function sonarGameOver() {
 let recordMaximo = localStorage.getItem('snakeHighScore') ? parseInt(localStorage.getItem('snakeHighScore')) : 0;
 highScoreText.innerText = recordMaximo;
 
-setInterval(mostrarJuego, 130);
+// 🔄 NUEVO BUCLE DE JUEGO DINÁMICO
+function bucleJuego() {
+    mostrarJuego();
+    // En lugar de un intervalo fijo, se vuelve a llamar a sí mismo usando la velocidad modificada
+    loopTimeoutToken = setTimeout(bucleJuego, velocidadActual);
+}
+
+// Arrancamos el bucle inteligente por primera vez
+bucleJuego();
+
 document.addEventListener('keydown', cambiarDireccion);
 
-// 🔄 GAME LOOP PRINCIPAL
 function mostrarJuego() {
-    // 1. RENDERIZADO DE FONDO Y ELEMENTOS BASE
     ctx.shadowBlur = 0;
     ctx.fillStyle = "#05050a";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -217,7 +227,6 @@ function mostrarJuego() {
     dibujarManzana();
     dibujarSerpiente();
 
-    // 🛑 FILTROS DE ESTADO DE JUEGO (Muestran pantallas y frenan el movimiento)
     if (estadoJuego === 'INICIO') {
         dibujarPantallaInicio();
         return; 
@@ -233,18 +242,16 @@ function mostrarJuego() {
         return; 
     }
 
-    // 🏃‍♂️ LÓGICA DE MOVIMIENTO (Solo ocurre si el estado es 'JUGANDO')
     actualDx = dx;
     actualDy = dy;
     
     let newX = snake[0].x + dx;
     let newY = snake[0].y + dy;
 
-    // COMPROBAR CHOQUE CONTRA LOS BORDES REALES
     if (newX < 0 || newX >= 400 || newY < 0 || newY >= 400 || chocoConsigoMisma(newX, newY)) {
         sonarGameOver();
-        estadoJuego = 'GAMEOVER'; // Cambia el estado en vez de lanzar un alert molesto
-        return; // Detiene el código, dejando congelada a la serpiente EXACTAMENTE contra el borde
+        estadoJuego = 'GAMEOVER'; 
+        return; 
     }
 
     snake.unshift({ x: newX, y: newY });
@@ -253,6 +260,11 @@ function mostrarJuego() {
         puntuacion += 10;
         scoreText.innerText = puntuacion;
         sonarComer();
+        
+        // ⚡ LÓGICA DE ACELERACIÓN: Cada 3 manzanas (30 puntos), reducimos 8ms el tiempo de espera
+        // Ponemos un límite mínimo de 60ms para que no se vuelva físicamente imposible
+        let manzanasComidas = puntuacion / 10;
+        velocidadActual = Math.max(60, VELOCIDAD_INICIAL - (Math.floor(manzanasComidas / 3) * 8));
         
         if (puntuacion > recordMaximo) {
             recordMaximo = puntuacion;
@@ -266,7 +278,6 @@ function mostrarJuego() {
     }
 }
 
-// 🎨 COMPONENTES DE DIBUJO
 function dibujarManzana() {
     ctx.shadowBlur = 15;
     ctx.shadowColor = "#ff0055";
@@ -276,14 +287,17 @@ function dibujarManzana() {
     ctx.fill();
 }
 
+// 🌊 NUEVA SERPIENTE CON EFECTO ESTELA CYBERPUNK
 function dibujarSerpiente() {
     for (let i = 0; i < snake.length; i++) {
         if (i === 0) {
             ctx.fillStyle = "#00fff2"; 
             ctx.shadowColor = "#00fff2";
         } else {
-            ctx.fillStyle = "#00ff88";
-            ctx.shadowColor = "#00ff88";
+            // 💡 CÁLCULO DE OPACIDAD: La cola se desvanece suavemente de forma proporcional
+            let opacidad = 1 - (i / snake.length) * 0.65; 
+            ctx.fillStyle = `rgba(0, 255, 136, ${opacidad})`;
+            ctx.shadowColor = `rgba(0, 255, 136, ${opacidad})`;
         }
         ctx.shadowBlur = 15;
         ctx.fillRect(snake[i].x + 1, snake[i].y + 1, 18, 18);
@@ -317,7 +331,6 @@ function dibujarPantallaPausa() {
     ctx.fillText("JUEGO EN PAUSA", canvas.width / 2, 208);
 }
 
-// 🎨 NUEVO: Letrero elegante de Game Over integrado en el Canvas
 function dibujarPantallaGameOver() {
     ctx.shadowBlur = 10;
     ctx.shadowColor = "#ff0055";
@@ -339,11 +352,9 @@ function dibujarPantallaGameOver() {
     ctx.fillText("Pulsa cualquier botón para reiniciar", canvas.width / 2, 248);
 }
 
-// 🎮 CONTROLADOR DE DIRECCIÓN E INTERRUPTORES
 function cambiarDireccion(elemento) {
     const tecla = typeof elemento === 'string' ? elemento : elemento.key;
 
-    // 🔄 REINICIO INTEGRADO: Si perdimos, tocar cualquier botón limpia y arranca el juego
     if (estadoJuego === 'GAMEOVER') {
         reiniciarJuego();
         estadoJuego = 'JUGANDO';
@@ -407,6 +418,7 @@ function generarNuevaManzana() {
 
 function reiniciarJuego() {
     puntuacion = 0;
+    velocidadActual = VELOCIDAD_INICIAL; // ⚡ Resetea la velocidad al morir
     scoreText.innerText = puntuacion;
     document.getElementById('pauseBtn').innerText = "⏸️";
     snake = [
