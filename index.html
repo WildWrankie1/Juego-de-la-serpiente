@@ -34,12 +34,6 @@
             color: #00fff2;
         }
 
-        .high-score {
-            color: #ffaa00;
-            text-shadow: 0 0 10px #ffaa00;
-            margin-left: 15px;
-        }
-
         /* Botón de Pausa Estilizado ⏸️ */
         #pauseBtn {
             background: none;
@@ -124,7 +118,6 @@
 
     <div class="score-container">
         <span>Puntos: <span id="scoreText">0</span></span>
-        <span class="high-score">🏆 Récord: <span id="highScoreText">0</span></span>
         <button id="pauseBtn" onclick="togglePausa()">⏸️</button>
     </div>
     
@@ -143,7 +136,6 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreText = document.getElementById('scoreText');
-const highScoreText = document.getElementById('highScoreText');
 
 let snake = [
     { x: 160, y: 160 },
@@ -161,10 +153,21 @@ let puntuacion = 0;
 let estadoJuego = 'INICIO';
 let audioCtx = null;
 
-// ⚡ VARIABLES DE VELOCIDAD DINÁMICA
 const VELOCIDAD_INICIAL = 130;
 let velocidadActual = VELOCIDAD_INICIAL;
-let loopTimeoutToken = null; // Guardará el temporizador activo
+
+// 💾 SISTEMA DE TABLA DE POSICIONES (TOP 5)
+// Si no hay nada guardado, genera récords ficticios de fábrica estilo arcade
+let tablaPosiciones = localStorage.getItem('snakeLeaderboard') 
+    ? JSON.parse(localStorage.getItem('snakeLeaderboard')) 
+    : [
+        { name: "GUTS", score: 250 },
+        { name: "SNAKE", score: 140 },
+        { name: "NEWBIE", score: 70 },
+        { name: "PERÚ", score: 50 },
+        { name: "ES", score: 20 },
+        { name: "CLAVE", score: 10 }
+      ];
 
 function iniciarAudio() {
     if (!audioCtx) {
@@ -204,17 +207,10 @@ function sonarGameOver() {
     osc.stop(audioCtx.currentTime + 0.4);
 }
 
-let recordMaximo = localStorage.getItem('snakeHighScore') ? parseInt(localStorage.getItem('snakeHighScore')) : 0;
-highScoreText.innerText = recordMaximo;
-
-// 🔄 NUEVO BUCLE DE JUEGO DINÁMICO
 function bucleJuego() {
     mostrarJuego();
-    // En lugar de un intervalo fijo, se vuelve a llamar a sí mismo usando la velocidad modificada
-    loopTimeoutToken = setTimeout(bucleJuego, velocidadActual);
+    setTimeout(bucleJuego, velocidadActual);
 }
-
-// Arrancamos el bucle inteligente por primera vez
 bucleJuego();
 
 document.addEventListener('keydown', cambiarDireccion);
@@ -251,6 +247,7 @@ function mostrarJuego() {
     if (newX < 0 || newX >= 400 || newY < 0 || newY >= 400 || chocoConsigoMisma(newX, newY)) {
         sonarGameOver();
         estadoJuego = 'GAMEOVER'; 
+        verificarYGuardarRecord(); // Evalúa si entramos al Top 5
         return; 
     }
 
@@ -261,16 +258,8 @@ function mostrarJuego() {
         scoreText.innerText = puntuacion;
         sonarComer();
         
-        // ⚡ LÓGICA DE ACELERACIÓN: Cada 3 manzanas (30 puntos), reducimos 8ms el tiempo de espera
-        // Ponemos un límite mínimo de 60ms para que no se vuelva físicamente imposible
         let manzanasComidas = puntuacion / 10;
         velocidadActual = Math.max(60, VELOCIDAD_INICIAL - (Math.floor(manzanasComidas / 3) * 8));
-        
-        if (puntuacion > recordMaximo) {
-            recordMaximo = puntuacion;
-            highScoreText.innerText = recordMaximo;
-            localStorage.setItem('snakeHighScore', recordMaximo);
-        }
         
         generarNuevaManzana();
     } else {
@@ -287,14 +276,12 @@ function dibujarManzana() {
     ctx.fill();
 }
 
-// 🌊 NUEVA SERPIENTE CON EFECTO ESTELA CYBERPUNK
 function dibujarSerpiente() {
     for (let i = 0; i < snake.length; i++) {
         if (i === 0) {
             ctx.fillStyle = "#00fff2"; 
             ctx.shadowColor = "#00fff2";
         } else {
-            // 💡 CÁLCULO DE OPACIDAD: La cola se desvanece suavemente de forma proporcional
             let opacidad = 1 - (i / snake.length) * 0.65; 
             ctx.fillStyle = `rgba(0, 255, 136, ${opacidad})`;
             ctx.shadowColor = `rgba(0, 255, 136, ${opacidad})`;
@@ -331,25 +318,69 @@ function dibujarPantallaPausa() {
     ctx.fillText("JUEGO EN PAUSA", canvas.width / 2, 208);
 }
 
+// 🎨 ACTUALIZADO: Tabla adaptada para nombres de 6 letras
 function dibujarPantallaGameOver() {
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 15;
     ctx.shadowColor = "#ff0055";
-    ctx.fillStyle = "rgba(255, 0, 85, 0.22)";
-    ctx.fillRect(40, 130, 320, 140);
+    ctx.fillStyle = "rgba(15, 10, 25, 0.92)";
+    ctx.strokeStyle = "#ff0055";
+    ctx.lineWidth = 3;
+    ctx.fillRect(30, 20, 340, 360);
+    ctx.strokeRect(30, 20, 340, 360);
     
     ctx.shadowBlur = 0;
     ctx.fillStyle = "#ff0055";
-    ctx.font = "bold 28px 'Segoe UI', Arial";
+    ctx.font = "bold 26px 'Segoe UI', Arial";
     ctx.textAlign = "center";
-    ctx.fillText("¡GAME OVER! 😵", canvas.width / 2, 175);
+    ctx.fillText("¡GAME OVER! 😵", canvas.width / 2, 60);
     
     ctx.fillStyle = "#fff";
-    ctx.font = "16px 'Segoe UI', Arial";
-    ctx.fillText("Puntuación final: " + puntuacion, canvas.width / 2, 215);
+    ctx.font = "15px 'Segoe UI', Arial";
+    ctx.fillText("Tu puntuación: " + puntuacion, canvas.width / 2, 90);
     
+    ctx.fillStyle = "#ffaa00";
+    ctx.font = "bold 16px 'Segoe UI', Arial";
+    ctx.fillText("🏆 TOP 5 MEJORES JUGADORES 🏆", canvas.width / 2, 130);
+    
+    ctx.font = "bold 16px 'Courier New', Courier, monospace"; 
+    ctx.textAlign = "left";
+    
+    for (let i = 0; i < 5; i++) {
+        let jugador = tablaPosiciones[i] || { name: "------", score: 0 };
+        let yPos = 170 + (i * 30);
+        
+        ctx.fillStyle = (jugador.score === puntuacion && jugador.score > 0) ? "#00fff2" : "#fff";
+        
+        let puesto = i + 1;
+        // .padEnd(7) asegura que los nombres cortos se rellenen con puntos hasta ocupar el espacio de 6 letras + 1 espacio
+        let textoFila = `${puesto}. ${jugador.name.padEnd(7, '.')} ${String(jugador.score).padStart(4, '0')} PTS`;
+        ctx.fillText(textoFila, canvas.width / 2 - 120, yPos); // Movido a -120 para centrar la línea más larga
+    }
+    
+    ctx.textAlign = "center";
     ctx.font = "italic 13px 'Segoe UI', Arial";
-    ctx.fillStyle = "#888";
-    ctx.fillText("Pulsa cualquier botón para reiniciar", canvas.width / 2, 248);
+    ctx.fillStyle = "#777";
+    ctx.fillText("Toca cualquier dirección para reiniciar", canvas.width / 2, 355);
+}
+
+// 💾 ACTUALIZADO: Corta el texto a 6 letras máximo
+function verificarYGuardarRecord() {
+    if (puntuacion > 0 && (tablaPosiciones.length < 5 || puntuacion > tablaPosiciones[tablaPosiciones.length - 1].score)) {
+        setTimeout(() => {
+            let iniciales = prompt("¡ENTRASTE AL TOP 5! 👑\nIntroduce tu nombre (máx. 6 letras):");
+            
+            if (!iniciales) iniciales = "PLAYER";
+            iniciales = iniciales.substring(0, 6).toUpperCase(); // 👈 Cambiado de 3 a 6 letras
+            
+            tablaPosiciones.push({ name: iniciales, score: puntuacion });
+            tablaPosiciones.sort((a, b) => b.score - a.score);
+            tablaPosiciones = tablaPosiciones.slice(0, 5);
+            
+            localStorage.setItem('snakeLeaderboard', JSON.stringify(tablaPosiciones));
+            
+            mostrarJuego();
+        }, 80);
+    }
 }
 
 function cambiarDireccion(elemento) {
@@ -418,7 +449,7 @@ function generarNuevaManzana() {
 
 function reiniciarJuego() {
     puntuacion = 0;
-    velocidadActual = VELOCIDAD_INICIAL; // ⚡ Resetea la velocidad al morir
+    velocidadActual = VELOCIDAD_INICIAL;
     scoreText.innerText = puntuacion;
     document.getElementById('pauseBtn').innerText = "⏸️";
     snake = [
