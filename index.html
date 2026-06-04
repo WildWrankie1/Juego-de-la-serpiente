@@ -130,7 +130,7 @@
         <div class="btn" id="btn-down" onclick="cambiarDireccion('ArrowDown')">🔽</div>
     </div>
     
-    <div class="instructions">Usa las flechas para moverte | P o ESC para Pausa</div>
+    <div class="instructions">Flechas para mover | Espacio para iniciar/reiniciar | P para Pausa</div>
 
     <script>
 const canvas = document.getElementById('gameCanvas');
@@ -156,16 +156,14 @@ let audioCtx = null;
 const VELOCIDAD_INICIAL = 130;
 let velocidadActual = VELOCIDAD_INICIAL;
 
-// 💾 SISTEMA DE TABLA DE POSICIONES (TOP 5)
-// Si no hay nada guardado, genera récords ficticios de fábrica estilo arcade
-let tablaPosiciones = localStorage.getItem('snakeLeaderboard') 
-    ? JSON.parse(localStorage.getItem('snakeLeaderboard')) 
+let tablaPosiciones = localStorage.getItem('snakeLeaderboard_v2') 
+    ? JSON.parse(localStorage.getItem('snakeLeaderboard_v2')) 
     : [
-        { name: "GUTS", score: 250 },
-        { name: "SNAKE", score: 140 },
-        { name: "PERÚ", score: 70 },
-        { name: "ES", score: 50 },
-        { name: "CLAVE", score: 20 }        
+        { name: "FRANCI", score: 50 },
+        { name: "SNAKE",  score: 40 },
+        { name: "CYBER",  score: 30 },
+        { name: "PLAYER", score: 20 },
+        { name: "NEWBIE", score: 10 }
       ];
 
 function iniciarAudio() {
@@ -246,7 +244,7 @@ function mostrarJuego() {
     if (newX < 0 || newX >= 400 || newY < 0 || newY >= 400 || chocoConsigoMisma(newX, newY)) {
         sonarGameOver();
         estadoJuego = 'GAMEOVER'; 
-        verificarYGuardarRecord(); // Evalúa si entramos al Top 5
+        verificarYGuardarRecord(); 
         return; 
     }
 
@@ -298,10 +296,10 @@ function dibujarPantallaInicio() {
     
     ctx.shadowBlur = 0;
     ctx.fillStyle = "#00fff2";
-    ctx.font = "bold 16px 'Segoe UI', Arial";
+    ctx.font = "bold 15px 'Segoe UI', Arial";
     ctx.textAlign = "center";
-    ctx.fillText("PRESIONA CUALQUIER DIRECCIÓN", canvas.width / 2, 195);
-    ctx.fillText("O BOTÓN PARA EMPEZAR 🎮", canvas.width / 2, 225);
+    ctx.fillText("PULSA ESPACIO O EL DPAD", canvas.width / 2, 195);
+    ctx.fillText("PARA EMPEZAR EL JUEGO 🎮", canvas.width / 2, 225);
 }
 
 function dibujarPantallaPausa() {
@@ -317,7 +315,6 @@ function dibujarPantallaPausa() {
     ctx.fillText("JUEGO EN PAUSA", canvas.width / 2, 208);
 }
 
-// 🎨 ACTUALIZADO: Tabla adaptada para nombres de 6 letras
 function dibujarPantallaGameOver() {
     ctx.shadowBlur = 15;
     ctx.shadowColor = "#ff0055";
@@ -351,51 +348,58 @@ function dibujarPantallaGameOver() {
         ctx.fillStyle = (jugador.score === puntuacion && jugador.score > 0) ? "#00fff2" : "#fff";
         
         let puesto = i + 1;
-        // .padEnd(7) asegura que los nombres cortos se rellenen con puntos hasta ocupar el espacio de 6 letras + 1 espacio
         let textoFila = `${puesto}. ${jugador.name.padEnd(7, '.')} ${String(jugador.score).padStart(4, '0')} PTS`;
-        ctx.fillText(textoFila, canvas.width / 2 - 120, yPos); // Movido a -120 para centrar la línea más larga
+        ctx.fillText(textoFila, canvas.width / 2 - 120, yPos); 
     }
     
     ctx.textAlign = "center";
     ctx.font = "italic 13px 'Segoe UI', Arial";
     ctx.fillStyle = "#777";
-    ctx.fillText("Toca cualquier dirección para reiniciar", canvas.width / 2, 355);
+    ctx.fillText("Pulsa Espacio o el D-pad para reiniciar", canvas.width / 2, 355);
 }
 
-// 💾 ACTUALIZADO: Corta el texto a 6 letras máximo
 function verificarYGuardarRecord() {
-    if (puntuacion > 0 && (tablaPosiciones.length < 5 || puntuacion > tablaPosiciones[tablaPosiciones.length - 1].score)) {
+    if (puntuacion > 0 && (tablaPosiciones.length < 5 || puntuacion >= tablaPosiciones[tablaPosiciones.length - 1].score)) {
         setTimeout(() => {
             let iniciales = prompt("¡ENTRASTE AL TOP 5! 👑\nIntroduce tu nombre (máx. 6 letras):");
             
             if (!iniciales) iniciales = "PLAYER";
-            iniciales = iniciales.substring(0, 6).toUpperCase(); // 👈 Cambiado de 3 a 6 letras
+            iniciales = iniciales.substring(0, 6).toUpperCase(); 
             
             tablaPosiciones.push({ name: iniciales, score: puntuacion });
             tablaPosiciones.sort((a, b) => b.score - a.score);
             tablaPosiciones = tablaPosiciones.slice(0, 5);
             
-            localStorage.setItem('snakeLeaderboard', JSON.stringify(tablaPosiciones));
+            localStorage.setItem('snakeLeaderboard_v2', JSON.stringify(tablaPosiciones));
             
             mostrarJuego();
         }, 80);
     }
 }
 
+// 🎮 CONTROLADOR DE DIRECCIÓN CON FILTRADO DE ENTRADA INTELIGENTE
 function cambiarDireccion(elemento) {
+    // Si es un evento de teclado, extrae la tecla; si es texto del botón móvil, usa el string directo
     const tecla = typeof elemento === 'string' ? elemento : elemento.key;
 
+    // 🔄 REINICIO INTEGRADO (Desde la pantalla de GameOver)
     if (estadoJuego === 'GAMEOVER') {
-        reiniciarJuego();
-        estadoJuego = 'JUGANDO';
+        // Solo reacciona si pulsas la barra espaciadora (' ') o botones de dirección
+        if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) {
+            reiniciarJuego();
+            estadoJuego = 'JUGANDO';
+        }
         return;
     }
 
+    // 🚀 INICIO INTEGRADO (Desde la pantalla de bienvenida)
     if (estadoJuego === 'INICIO') {
-        if (['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) {
+        // Solo reacciona si pulsas la barra espaciadora (' ') o botones de dirección
+        if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) {
             iniciarAudio();
             estadoJuego = 'JUGANDO';
         }
+        return;
     }
 
     if (tecla === 'p' || tecla === 'P' || tecla === 'Escape') {
