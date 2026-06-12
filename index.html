@@ -5,116 +5,142 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Snake Neon Edition 🐍✨</title>
     <style>
-        /* 🌌 Fondo futurista */
+        /* 🌌 Fondo futurista base */
         body {
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%);
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #fff;
             overflow: hidden;
-            touch-action: manipulation; 
+            touch-action: manipulation;
+            transition: background 0.3s;
         }
 
-        /* 🏆 Contenedor del Marcador y Botón Pausa */
+        /* 🎨 PALETAS DE COLORES (Variables CSS de Temas) */
+        .theme-cyberpunk {
+            background: radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%);
+            --color-ui: #00fff2; --color-head: #00fff2; --color-body: #00ff88; --color-apple: #ff0055;
+        }
+        .theme-matrix {
+            background: #000;
+            --color-ui: #32CD32; --color-head: #32CD32; --color-body: #008000; --color-apple: #adff2f;
+        }
+        .theme-synthwave {
+            background: linear-gradient(180deg, #2d132c 0%, #190918 100%);
+            --color-ui: #ff6e00; --color-head: #ff6e00; --color-body: #800080; --color-apple: #ffc900;
+        }
+
+        /* 🏆 Contenedor del Marcador y Pausa */
         .score-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: bold;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            text-shadow: 0 0 10px #00fff2;
-            color: #00fff2;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: bold; letter-spacing: 1px;
+            margin-bottom: 10px; text-transform: uppercase;
+            text-shadow: 0 0 10px var(--color-ui); color: var(--color-ui);
         }
 
-        /* Botón de Pausa Estilizado ⏸️ */
         #pauseBtn {
-            background: none;
-            border: 2px solid #ff0055;
-            color: #ff0055;
-            border-radius: 8px;
-            padding: 2px 8px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-left: 20px;
-            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
-            transition: background-color 0.1s, transform 0.1s;
+            background: none; border: 2px solid var(--color-apple);
+            color: var(--color-apple); border-radius: 8px;
+            padding: 2px 8px; cursor: pointer; font-size: 16px; margin-left: 20px;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2); transition: background-color 0.1s;
         }
-        #pauseBtn:active {
-            background-color: #ff0055;
-            color: #fff;
-            box-shadow: 0 0 20px #ff0055;
-            transform: scale(0.9);
-        }
+        #pauseBtn:active { background-color: var(--color-apple); color: #fff; box-shadow: 0 0 20px var(--color-apple); }
 
-        /* 🎮 El Lienzo Ajustado */
+        /* 🎮 Menús Superiores: Temas, Modos de Juego y Récords */
+        .menu-row { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .menu-subrow { display: flex; align-items: center; gap: 15px; }
+        .theme-menu { display: flex; gap: 8px; }
+        .theme-btn {
+            width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff;
+            cursor: pointer; transition: transform 0.1s; box-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+        .theme-btn.active { border-color: var(--color-ui); box-shadow: 0 0 10px var(--color-ui); }
+
+        .mode-menu { font-size: 12px; font-weight: bold; text-shadow: 0 0 5px var(--color-ui); color: var(--color-ui); }
+        .mode-btn {
+            background: none; border: 1.5px solid var(--color-ui); color: var(--color-ui);
+            padding: 2px 8px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 11px;
+            transition: all 0.2s; margin-left: 4px;
+        }
+        .mode-btn.active { background: var(--color-ui); color: #05050a; box-shadow: 0 0 10px var(--color-ui); }
+        
+        #recordsBtn { border-color: #ffaa00; color: #ffaa00; text-shadow: 0 0 5px #ffaa00; }
+        #recordsBtn.active { background: #ffaa00; color: #05050a; box-shadow: 0 0 10px #ffaa00; }
+
+        /* 💥 EFECTO SCREEN SHAKE */
+        @keyframes shake-light {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-2px, 1px); }
+            40% { transform: translate(2px, -1px); }
+            60% { transform: translate(-1px, -1px); }
+            80% { transform: translate(1px, 1px); }
+            100% { transform: translate(0, 0); }
+        }
+        @keyframes shake-heavy {
+            0% { transform: translate(0, 0); }
+            10% { transform: translate(-4px, 4px); }
+            30% { transform: translate(5px, -3px); }
+            50% { transform: translate(-5px, -4px); }
+            70% { transform: translate(4px, 3px); }
+            90% { transform: translate(-1px, 1px); }
+            100% { transform: translate(0, 0); }
+        }
+        .shake-light { animation: shake-light 0.12s ease-in-out; }
+        .shake-heavy { animation: shake-heavy 0.25s ease-in-out; }
+
+        /* 🎮 El Canvas */
         canvas {
-            background-color: #05050a;
-            border: 4px solid #00ff88;
-            border-radius: 10px;
-            box-shadow: 0 0 25px rgba(0, 255, 136, 0.4);
-            max-width: 85vw; 
-            max-height: 85vw;
+            background-color: #05050a; border: 4px solid var(--color-body);
+            border-radius: 10px; box-shadow: 0 0 25px var(--color-body);
+            max-width: 85vw; max-height: 85vw;
         }
 
-        /* 🕹️ Cruceta de Controles Ergonómica */
+        /* 🕹️ Cruceta Móvil */
         .controls {
-            display: grid;
-            grid-template-columns: repeat(3, 85px); 
-            grid-template-rows: repeat(3, 85px);    
-            gap: 12px;                              
-            margin-top: 25px;
-            margin-bottom: 20px;                    
+            display: grid; grid-template-columns: repeat(3, 85px); 
+            grid-template-rows: repeat(3, 85px); gap: 12px; margin-top: 20px; margin-bottom: 15px;
         }
-
         .btn {
-            background-color: rgba(5, 5, 10, 0.85);
-            border: 2.5px solid #00fff2;
-            border-radius: 20px;                    
-            color: #00fff2;
-            font-size: 28px;                        
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            box-shadow: 0 0 12px rgba(0, 255, 242, 0.2);
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            background-color: rgba(5, 5, 10, 0.85); border: 2.5px solid var(--color-ui);
+            border-radius: 20px; color: var(--color-ui); font-size: 28px;
+            display: flex; justify-content: center; align-items: center; cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 255, 242, 0.2); user-select: none;
+            -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
             transition: background-color 0.1s, transform 0.05s;
         }
-
-        .btn:active {
-            background-color: #00fff2;
-            color: #05050a;
-            box-shadow: 0 0 25px #00fff2;
-            transform: scale(0.95);                 
-        }
-
+        .btn:active { background-color: var(--color-ui); color: #05050a; box-shadow: 0 0 25px var(--color-ui); transform: scale(0.95); }
         #btn-up    { grid-column: 2; grid-row: 1; }
         #btn-left  { grid-column: 1; grid-row: 2; }
         #btn-right { grid-column: 3; grid-row: 2; }
         #btn-down  { grid-column: 2; grid-row: 3; }
 
-        .instructions {
-            margin-top: 10px;
-            font-size: 12px;
-            color: #555;
-            text-align: center;
-        }
-        @media (max-width: 600px) {
-            .instructions { display: none; }
-        }
+        .instructions { margin-top: 5px; font-size: 12px; color: #555; text-align: center; }
+        @media (max-width: 600px) { .instructions { display: none; } }
     </style>
 </head>
-<body>
+<body class="theme-cyberpunk">
+
+    <div class="menu-row">
+        <div class="menu-subrow">
+            <div class="theme-menu">
+                <div class="theme-btn theme-cyberpunk active" onclick="setTheme('theme-cyberpunk')" style="background: cyan; border-color: pink;"></div>
+                <div class="theme-btn theme-matrix" onclick="setTheme('theme-matrix')" style="background: lime;"></div>
+                <div class="theme-btn theme-synthwave" onclick="setTheme('theme-synthwave')" style="background: orange; border-color: purple;"></div>
+            </div>
+            <div class="mode-menu">
+                MODO:
+                <button id="mode-clasico" class="mode-btn active" onclick="setModo('CLASICO')">CLÁSICO</button>
+                <button id="mode-pacman" class="mode-btn" onclick="setModo('PACMAN')">PAC-MAN</button>
+            </div>
+        </div>
+        <div>
+            <button id="recordsBtn" class="mode-btn" onclick="toggleLeaderboard()">🏆 VER RÉCORDS</button>
+        </div>
+    </div>
 
     <div class="score-container">
         <span>Puntos: <span id="scoreText">0</span></span>
@@ -130,7 +156,7 @@
         <div class="btn" id="btn-down" onclick="cambiarDireccion('ArrowDown')">🔽</div>
     </div>
     
-    <div class="instructions">Flechas para mover | Espacio para iniciar/reiniciar | P para Pausa</div>
+    <div class="instructions">Flechas para mover | Espacio o Dpad para iniciar | P para Pausa</div>
 
     <script>
 const canvas = document.getElementById('gameCanvas');
@@ -149,264 +175,394 @@ let dy = 0;
 let actualDx = 20;
 let actualDy = 0;
 let puntuacion = 0;
-
 let estadoJuego = 'INICIO';
 let audioCtx = null;
 
 const VELOCIDAD_INICIAL = 130;
 let velocidadActual = VELOCIDAD_INICIAL;
 
-let tablaPosiciones = localStorage.getItem('snakeLeaderboard_v2') 
-    ? JSON.parse(localStorage.getItem('snakeLeaderboard_v2')) 
+let modoJuego = 'CLASICO';
+
+let manzanasNormalesContador = 0;
+let frutaEspecial = { x: -100, y: -100, type: null, active: false, ticksMax: 0, ticksLeft: 0 };
+let powerupActivo = null; 
+let powerupTicksLeft = 0;
+
+let colorPaleta = {};
+function actualizarColoresJS() {
+    const computed = getComputedStyle(document.body);
+    colorPaleta = {
+        ui: computed.getPropertyValue('--color-ui').trim(),
+        head: computed.getPropertyValue('--color-head').trim(),
+        body: computed.getPropertyValue('--color-body').trim(),
+        apple: computed.getPropertyValue('--color-apple').trim(),
+    };
+}
+actualizarColoresJS();
+
+// 💾 CLAVE ACTUALIZADA A V3 CON NUEVOS MEJORES RÉCORDS DE FÁBRICA
+let tablaPosiciones = localStorage.getItem('snakeLeaderboard_v3') 
+    ? JSON.parse(localStorage.getItem('snakeLeaderboard_v3')) 
     : [
-        { name: "FRANCI", score: 50 },
-        { name: "SNAKE",  score: 40 },
-        { name: "CYBER",  score: 30 },
-        { name: "PLAYER", score: 20 },
-        { name: "NEWBIE", score: 10 }
+        { name: "ANTARES",  score: 1500 },
+        { name: "SNAKE",  score: 400 },
+        { name: "CYBER",  score: 300 },
+        { name: "PLAYER", score: 200 },
+        { name: "NEWBIE", score: 100 }
       ];
 
-function iniciarAudio() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// ✨ SISTEMA DE PARTÍCULAS
+let particles = [];
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y; this.color = color;
+        this.vx = (Math.random() - 0.5) * 8; 
+        this.vy = (Math.random() - 0.5) * 8; 
+        this.life = 1.0; 
+        this.decay = Math.random() * 0.04 + 0.03;
+    }
+    update() { this.x += this.vx; this.y += this.vy; this.vx *= 0.96; this.vy *= 0.96; this.life -= this.decay; }
+    draw() {
+        if (this.life <= 0) return;
+        ctx.save(); ctx.shadowBlur = 10 * this.life; ctx.shadowColor = this.color;
+        ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, 3, 3); ctx.restore();
+    }
+}
+function crearExplosionParticulas(x, y, color) {
+    for (let i = 0; i < 14; i++) particles.push(new Particle(x + 10, y + 10, color));
+}
+
+// 💥 SACUDIDA DE PANTALLA
+function sacudirTablero(tipo) {
+    canvas.classList.remove('shake-light', 'shake-heavy');
+    void canvas.offsetWidth; 
+    if (tipo === 'light') canvas.classList.add('shake-light');
+    if (tipo === 'heavy') canvas.classList.add('shake-heavy');
+}
+
+function toggleLeaderboard() {
+    iniciarAudio();
+    if (estadoJuego === 'LEADERBOARD') {
+        estadoJuego = 'INICIO';
+        document.getElementById('recordsBtn').classList.remove('active');
+    } else {
+        estadoJuego = 'LEADERBOARD';
+        document.getElementById('recordsBtn').classList.add('active');
     }
 }
 
-function sonarComer() {
-    iniciarAudio();
-    if (!audioCtx) return;
-    let osc = audioCtx.createOscillator();
-    let gain = audioCtx.createGain();
+function setModo(modo) {
+    if (estadoJuego !== 'INICIO' && estadoJuego !== 'GAMEOVER' && estadoJuego !== 'LEADERBOARD') return; 
+    modoJuego = modo;
+    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+    if (modo === 'CLASICO') document.getElementById('mode-clasico').classList.add('active');
+    if (modo === 'PACMAN') document.getElementById('mode-pacman').classList.add('active');
+}
+
+function setTheme(themeName) {
+    document.body.classList.remove('theme-cyberpunk', 'theme-matrix', 'theme-synthwave');
+    document.body.classList.add(themeName);
+    actualizarColoresJS();
+    document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`.theme-btn.${themeName}`).classList.add('active');
+}
+
+function iniciarAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+function sonarComer(tipo = 'normal') {
+    iniciarAudio(); if (!audioCtx) return;
+    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
     osc.type = 'square';
-    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
-    osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.06);
+    if (tipo === 'banana') {
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime); 
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.08);
+    } else if (tipo === 'chili') {
+        osc.type = 'sawtooth'; 
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.05);
+    } else {
+        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.06);
+    }
     gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.2);
 }
 
 function sonarGameOver() {
-    iniciarAudio();
-    if (!audioCtx) return;
-    let osc = audioCtx.createOscillator();
-    let gain = audioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(250, audioCtx.currentTime);
+    iniciarAudio(); if (!audioCtx) return;
+    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(250, audioCtx.currentTime);
     osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.4);
     gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.4);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.4);
 }
 
-function bucleJuego() {
-    mostrarJuego();
-    setTimeout(bucleJuego, velocidadActual);
-}
+function bucleJuego() { mostrarJuego(); setTimeout(bucleJuego, velocidadActual); }
 bucleJuego();
 
 document.addEventListener('keydown', cambiarDireccion);
 
 function mostrarJuego() {
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#05050a";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    ctx.fillStyle = "#05050a"; ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     dibujarManzana();
+    dibujarFrutaEspecial();
     dibujarSerpiente();
 
-    if (estadoJuego === 'INICIO') {
-        dibujarPantallaInicio();
-        return; 
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update(); particles[i].draw();
+        if (particles[i].life <= 0) particles.splice(i, 1);
+    }
+    ctx.globalAlpha = 1;
+
+    if (estadoJuego === 'JUGANDO') {
+        if (frutaEspecial.active) {
+            frutaEspecial.ticksLeft--;
+            if (frutaEspecial.ticksLeft <= 0) frutaEspecial.active = false;
+        }
+        if (powerupActivo) {
+            powerupTicksLeft--;
+            if (powerupTicksLeft <= 0) powerupActivo = null;
+        }
     }
 
-    if (estadoJuego === 'PAUSA') {
-        dibujarPantallaPausa();
-        return; 
+    if (estadoJuego === 'LEADERBOARD') {
+        document.getElementById('recordsBtn').classList.add('active');
+    } else {
+        document.getElementById('recordsBtn').classList.remove('active');
     }
 
-    if (estadoJuego === 'GAMEOVER') {
-        dibujarPantallaGameOver();
-        return; 
+    if (estadoJuego === 'INICIO') { dibujarPantallaInicio(); return; }
+    if (estadoJuego === 'PAUSA') { dibujarPantallaPausa(); return; }
+    if (estadoJuego === 'GAMEOVER') { dibujarPantallaGameOver(); return; }
+    if (estadoJuego === 'LEADERBOARD') { dibujarPantallaLeaderboard(); return; } 
+
+    actualDx = dx; actualDy = dy;
+    let newX = snake[0].x + dx; let newY = snake[0].y + dy;
+
+    let chocoPared = (newX < 0 || newX >= 400 || newY < 0 || newY >= 400);
+    if (chocoPared) {
+        if (modoJuego === 'CLASICO') {
+            sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; verificarYGuardarRecord(); return;
+        } else {
+            if (newX < 0) newX = 380; if (newX >= 400) newX = 0;
+            if (newY < 0) newY = 380; if (newY >= 400) newY = 0;
+        }
     }
 
-    actualDx = dx;
-    actualDy = dy;
-    
-    let newX = snake[0].x + dx;
-    let newY = snake[0].y + dy;
-
-    if (newX < 0 || newX >= 400 || newY < 0 || newY >= 400 || chocoConsigoMisma(newX, newY)) {
-        sonarGameOver();
-        estadoJuego = 'GAMEOVER'; 
-        verificarYGuardarRecord(); 
-        return; 
+    if (chocoConsigoMisma(newX, newY)) {
+        sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; verificarYGuardarRecord(); return;
     }
 
     snake.unshift({ x: newX, y: newY });
 
     if (newX === apple.x && newY === apple.y) {
-        puntuacion += 10;
+        let puntosGanados = (powerupActivo === 'chili') ? 30 : 10; 
+        puntuacion += puntosGanados;
         scoreText.innerText = puntuacion;
-        sonarComer();
+        sonarComer('normal');
+        sacudirTablero('light');
         
-        let manzanasComidas = puntuacion / 10;
-        velocidadActual = Math.max(60, VELOCIDAD_INICIAL - (Math.floor(manzanasComidas / 3) * 8));
-        
+        crearExplosionParticulas(apple.x, apple.y, colorPaleta.apple);
+
+        manzanasNormalesContador++;
+        if (manzanasNormalesContador % 5 === 0) generarFrutaEspecial();
+
+        ajustarVelocidadDinamica();
         generarNuevaManzana();
+    } 
+    else if (frutaEspecial.active && newX === frutaEspecial.x && newY === frutaEspecial.y) {
+        frutaEspecial.active = false;
+        sacudirTablero('light');
+        
+        if (frutaEspecial.type === 'banana') {
+            puntuacion += 20; sonarComer('banana'); powerupActivo = 'banana';
+            crearExplosionParticulas(frutaEspecial.x, frutaEspecial.y, "#00d2ff");
+            powerupTicksLeft = Math.floor(5000 / velocidadActual); 
+        } else {
+            puntuacion += 30; sonarComer('chili'); powerupActivo = 'chili';
+            crearExplosionParticulas(frutaEspecial.x, frutaEspecial.y, "#ff3300");
+            powerupTicksLeft = Math.floor(4000 / velocidadActual); 
+        }
+        scoreText.innerText = puntuacion;
+        ajustarVelocidadDinamica();
     } else {
         snake.pop();
     }
 }
 
+function ajustarVelocidadDinamica() {
+    let baseVel = Math.max(65, VELOCIDAD_INICIAL - (Math.floor(puntuacion / 40) * 8));
+    if (powerupActivo === 'banana') {
+        velocidadActual = baseVel + 35; 
+    } else if (powerupActivo === 'chili') {
+        velocidadActual = 55; 
+    } else {
+        velocidadActual = baseVel;
+    }
+}
+
+function generarFrutaEspecial() {
+    let ocupado = true;
+    while (ocupado) {
+        frutaEspecial.x = Math.floor(Math.random() * 20) * 20;
+        frutaEspecial.y = Math.floor(Math.random() * 20) * 20;
+        ocupado = (frutaEspecial.x === apple.x && frutaEspecial.y === apple.y);
+        for (let i = 0; i < snake.length; i++) {
+            if (frutaEspecial.x === snake[i].x && frutaEspecial.y === snake[i].y) ocupado = true;
+        }
+    }
+    frutaEspecial.type = Math.random() > 0.5 ? 'banana' : 'chili';
+    frutaEspecial.active = true;
+    frutaEspecial.ticksMax = Math.floor(6000 / velocidadActual); 
+    frutaEspecial.ticksLeft = frutaEspecial.ticksMax;
+}
+
 function dibujarManzana() {
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = "#ff0055";
-    ctx.fillStyle = "#ff0055";
+    ctx.shadowBlur = (powerupActivo === 'chili') ? 25 : 15;
+    ctx.shadowColor = colorPaleta.apple; ctx.fillStyle = colorPaleta.apple;
+    ctx.beginPath(); ctx.arc(apple.x + 10, apple.y + 10, 9, 0, 2 * Math.PI); ctx.fill();
+}
+
+function dibujarFrutaEspecial() {
+    if (!frutaEspecial.active) return;
+    ctx.save();
+    let colorFruta = (frutaEspecial.type === 'banana') ? "#00d2ff" : "#ff3300";
+    ctx.shadowBlur = 15; ctx.shadowColor = colorFruta; ctx.fillStyle = colorFruta;
+    ctx.beginPath(); ctx.arc(frutaEspecial.x + 10, frutaEspecial.y + 10, 8, 0, 2 * Math.PI); ctx.fill();
+
+    ctx.shadowBlur = 0; ctx.strokeStyle = colorFruta; ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(apple.x + 10, apple.y + 10, 9, 0, 2 * Math.PI);
-    ctx.fill();
+    let porcentajeTiempo = frutaEspecial.ticksLeft / frutaEspecial.ticksMax;
+    ctx.arc(frutaEspecial.x + 10, frutaEspecial.y + 10, 13, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * porcentajeTiempo));
+    ctx.stroke(); ctx.restore();
 }
 
 function dibujarSerpiente() {
+    ctx.shadowBlur = 15;
     for (let i = 0; i < snake.length; i++) {
         if (i === 0) {
-            ctx.fillStyle = "#00fff2"; 
-            ctx.shadowColor = "#00fff2";
+            ctx.fillStyle = powerupActivo ? ((powerupActivo === 'banana') ? "#00d2ff" : "#ff3300") : colorPaleta.head;
+            ctx.shadowColor = ctx.fillStyle;
         } else {
-            let opacidad = 1 - (i / snake.length) * 0.65; 
-            ctx.fillStyle = `rgba(0, 255, 136, ${opacidad})`;
-            ctx.shadowColor = `rgba(0, 255, 136, ${opacidad})`;
+            let opacidad = 1 - (i / snake.length) * 0.65;
+            ctx.fillStyle = colorPaleta.body.replace(')', `, ${opacidad})`);
+            ctx.shadowColor = colorPaleta.body;
         }
-        ctx.shadowBlur = 15;
         ctx.fillRect(snake[i].x + 1, snake[i].y + 1, 18, 18);
     }
 }
 
 function dibujarPantallaInicio() {
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = "#00fff2";
-    ctx.fillStyle = "rgba(0, 255, 242, 0.12)";
-    ctx.fillRect(40, 150, 320, 100);
-    
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#00fff2";
-    ctx.font = "bold 15px 'Segoe UI', Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("PULSA ESPACIO O EL DPAD", canvas.width / 2, 195);
-    ctx.fillText("PARA EMPEZAR EL JUEGO 🎮", canvas.width / 2, 225);
+    ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.ui;
+    ctx.fillStyle = "rgba(10, 10, 20, 0.85)"; ctx.fillRect(30, 140, 340, 110);
+    ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.ui; ctx.font = "bold 15px 'Segoe UI', Arial"; ctx.textAlign = "center";
+    ctx.fillText("PULSA ESPACIO O EL DPAD", canvas.width / 2, 190);
+    ctx.fillText("PARA EMPEZAR EL JUEGO 🎮", canvas.width / 2, 220);
 }
 
 function dibujarPantallaPausa() {
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = "#ff0055";
-    ctx.fillStyle = "rgba(255, 0, 85, 0.15)";
-    ctx.fillRect(90, 165, 220, 70);
-    
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#ff0055";
-    ctx.font = "bold 24px 'Segoe UI', Arial";
-    ctx.textAlign = "center";
+    ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.apple;
+    ctx.fillStyle = "rgba(10, 10, 20, 0.85)"; ctx.fillRect(90, 165, 220, 70);
+    ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.apple; ctx.font = "bold 24px 'Segoe UI', Arial"; ctx.textAlign = "center";
     ctx.fillText("JUEGO EN PAUSA", canvas.width / 2, 208);
 }
 
+// 🎨 LEADERBOARD ADAPTADO A 10 CARACTERES (Alineación a -140)
+function dibujarPantallaLeaderboard() {
+    ctx.shadowBlur = 15; ctx.shadowColor = "#ffaa00";
+    ctx.fillStyle = "rgba(15, 10, 25, 0.95)"; ctx.strokeStyle = "#ffaa00"; ctx.lineWidth = 3;
+    ctx.fillRect(30, 20, 340, 360); ctx.strokeRect(30, 20, 340, 360);
+
+    ctx.shadowBlur = 0; ctx.fillStyle = "#ffaa00"; ctx.font = "bold 24px 'Segoe UI', Arial"; ctx.textAlign = "center";
+    ctx.fillText("🏆 HALL OF FAME 🏆", canvas.width / 2, 70);
+
+    ctx.font = "bold 16px 'Courier New', Courier, monospace"; ctx.textAlign = "left";
+    for (let i = 0; i < 5; i++) {
+        let jugador = tablaPosiciones[i] || { name: "----------", score: 0 };
+        let yPos = 135 + (i * 38);
+        ctx.fillStyle = "#fff";
+        let puesto = i + 1;
+        // padEnd(11) distribuye perfectamente los puntos rellenando los 10 caracteres del nombre
+        let textoFila = `${puesto}. ${jugador.name.padEnd(11, '.')} ${String(jugador.score).padStart(4, '0')} PTS`;
+        ctx.fillText(textoFila, canvas.width / 2 - 140, yPos);
+    }
+    ctx.textAlign = "center"; ctx.font = "italic 13px 'Segoe UI', Arial"; ctx.fillStyle = "#777";
+    ctx.fillText("Pulsa el botón de nuevo o Espacio para volver", canvas.width / 2, 355);
+}
+
+// 🎨 GAMEOVER ADAPTADO A 10 CARACTERES (Alineación a -140)
 function dibujarPantallaGameOver() {
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = "#ff0055";
-    ctx.fillStyle = "rgba(15, 10, 25, 0.92)";
-    ctx.strokeStyle = "#ff0055";
-    ctx.lineWidth = 3;
-    ctx.fillRect(30, 20, 340, 360);
-    ctx.strokeRect(30, 20, 340, 360);
+    ctx.shadowBlur = 15; ctx.shadowColor = colorPaleta.apple;
+    ctx.fillStyle = "rgba(15, 10, 25, 0.95)"; ctx.strokeStyle = colorPaleta.apple; ctx.lineWidth = 3;
+    ctx.fillRect(30, 20, 340, 360); ctx.strokeRect(30, 20, 340, 360);
     
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#ff0055";
-    ctx.font = "bold 26px 'Segoe UI', Arial";
-    ctx.textAlign = "center";
+    ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.apple; ctx.font = "bold 26px 'Segoe UI', Arial"; ctx.textAlign = "center";
     ctx.fillText("¡GAME OVER! 😵", canvas.width / 2, 60);
-    
-    ctx.fillStyle = "#fff";
-    ctx.font = "15px 'Segoe UI', Arial";
+    ctx.fillStyle = "#fff"; ctx.font = "15px 'Segoe UI', Arial";
     ctx.fillText("Tu puntuación: " + puntuacion, canvas.width / 2, 90);
     
-    ctx.fillStyle = "#ffaa00";
-    ctx.font = "bold 16px 'Segoe UI', Arial";
+    ctx.fillStyle = "#ffaa00"; ctx.font = "bold 16px 'Segoe UI', Arial";
     ctx.fillText("🏆 TOP 5 MEJORES JUGADORES 🏆", canvas.width / 2, 130);
     
-    ctx.font = "bold 16px 'Courier New', Courier, monospace"; 
-    ctx.textAlign = "left";
-    
+    ctx.font = "bold 16px 'Courier New', Courier, monospace"; ctx.textAlign = "left";
     for (let i = 0; i < 5; i++) {
-        let jugador = tablaPosiciones[i] || { name: "------", score: 0 };
+        let jugador = tablaPosiciones[i] || { name: "----------", score: 0 };
         let yPos = 170 + (i * 30);
-        
-        ctx.fillStyle = (jugador.score === puntuacion && jugador.score > 0) ? "#00fff2" : "#fff";
-        
+        ctx.fillStyle = (jugador.score === puntuacion && jugador.score > 0) ? colorPaleta.ui : "#fff";
         let puesto = i + 1;
-        let textoFila = `${puesto}. ${jugador.name.padEnd(7, '.')} ${String(jugador.score).padStart(4, '0')} PTS`;
-        ctx.fillText(textoFila, canvas.width / 2 - 120, yPos); 
+        let textoFila = `${puesto}. ${jugador.name.padEnd(11, '.')} ${String(jugador.score).padStart(4, '0')} PTS`;
+        ctx.fillText(textoFila, canvas.width / 2 - 140, yPos); 
     }
-    
-    ctx.textAlign = "center";
-    ctx.font = "italic 13px 'Segoe UI', Arial";
-    ctx.fillStyle = "#777";
+    ctx.textAlign = "center"; ctx.font = "italic 13px 'Segoe UI', Arial"; ctx.fillStyle = "#777";
     ctx.fillText("Pulsa Espacio o el D-pad para reiniciar", canvas.width / 2, 355);
 }
 
+// 💾 CORTE DE NOMBRE CONFIGURADO A 10 CARACTERES MÁXIMO
 function verificarYGuardarRecord() {
     if (puntuacion > 0 && (tablaPosiciones.length < 5 || puntuacion >= tablaPosiciones[tablaPosiciones.length - 1].score)) {
         setTimeout(() => {
-            let iniciales = prompt("¡ENTRASTE AL TOP 5! 👑\nIntroduce tu nombre (máx. 6 letras):");
-            
+            let iniciales = prompt("¡ENTRASTE AL TOP 5! 👑\nIntroduce tu nombre (máx. 10 letras):");
             if (!iniciales) iniciales = "PLAYER";
-            iniciales = iniciales.substring(0, 6).toUpperCase(); 
+            iniciales = iniciales.substring(0, 10).toUpperCase(); // 👈 Modificado de 6 a 10 letras
             
             tablaPosiciones.push({ name: iniciales, score: puntuacion });
             tablaPosiciones.sort((a, b) => b.score - a.score);
             tablaPosiciones = tablaPosiciones.slice(0, 5);
-            
-            localStorage.setItem('snakeLeaderboard_v2', JSON.stringify(tablaPosiciones));
-            
+            localStorage.setItem('snakeLeaderboard_v3', JSON.stringify(tablaPosiciones)); // 👈 Clave v3
             mostrarJuego();
         }, 80);
     }
 }
 
-// 🎮 CONTROLADOR DE DIRECCIÓN CON FILTRADO DE ENTRADA INTELIGENTE
 function cambiarDireccion(elemento) {
-    // Si es un evento de teclado, extrae la tecla; si es texto del botón móvil, usa el string directo
     const tecla = typeof elemento === 'string' ? elemento : elemento.key;
 
-    // 🔄 REINICIO INTEGRADO (Desde la pantalla de GameOver)
+    if (estadoJuego === 'LEADERBOARD') {
+        if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) {
+            estadoJuego = 'INICIO';
+        }
+        return;
+    }
     if (estadoJuego === 'GAMEOVER') {
-        // Solo reacciona si pulsas la barra espaciadora (' ') o botones de dirección
         if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) {
-            reiniciarJuego();
-            estadoJuego = 'JUGANDO';
+            reiniciarJuego(); estadoJuego = 'JUGANDO';
         }
         return;
     }
-
-    // 🚀 INICIO INTEGRADO (Desde la pantalla de bienvenida)
     if (estadoJuego === 'INICIO') {
-        // Solo reacciona si pulsas la barra espaciadora (' ') o botones de dirección
         if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) {
-            iniciarAudio();
-            estadoJuego = 'JUGANDO';
+            iniciarAudio(); estadoJuego = 'JUGANDO';
         }
         return;
     }
-
-    if (tecla === 'p' || tecla === 'P' || tecla === 'Escape') {
-        togglePausa();
-        return;
-    }
-
+    if (tecla === 'p' || tecla === 'P' || tecla === 'Escape') { togglePausa(); return; }
     if (estadoJuego === 'PAUSA') return;
 
     if (tecla === 'ArrowLeft' && actualDx === 0)  { dx = -20; dy = 0; }
@@ -416,15 +572,12 @@ function cambiarDireccion(elemento) {
 }
 
 function togglePausa() {
-    if (estadoJuego === 'INICIO' || estadoJuego === 'GAMEOVER') return; 
+    if (estadoJuego === 'INICIO' || estadoJuego === 'GAMEOVER' || estadoJuego === 'LEADERBOARD') return; 
     iniciarAudio();
-    
     if (estadoJuego === 'JUGANDO') {
-        estadoJuego = 'PAUSA';
-        document.getElementById('pauseBtn').innerText = "▶️"; 
+        estadoJuego = 'PAUSA'; document.getElementById('pauseBtn').innerText = "▶️"; 
     } else if (estadoJuego === 'PAUSA') {
-        estadoJuego = 'JUGANDO';
-        document.getElementById('pauseBtn').innerText = "⏸️"; 
+        estadoJuego = 'JUGANDO'; document.getElementById('pauseBtn').innerText = "⏸️"; 
     }
 }
 
@@ -438,30 +591,23 @@ function chocoConsigoMisma(x, y) {
 function generarNuevaManzana() {
     let encimaDeLaSerpiente = true;
     while (encimaDeLaSerpiente) {
-        apple.x = Math.floor(Math.random() * 20) * 20;
-        apple.y = Math.floor(Math.random() * 20) * 20;
+        apple.x = Math.floor(Math.random() * 20) * 20; apple.y = Math.floor(Math.random() * 20) * 20;
         encimaDeLaSerpiente = false;
+        if (frutaEspecial.active && apple.x === frutaEspecial.x && apple.y === frutaEspecial.y) encimaDeLaSerpiente = true;
         for (let i = 0; i < snake.length; i++) {
-            if (apple.x === snake[i].x && apple.y === snake[i].y) {
-                encimaDeLaSerpiente = true;
-                break;
-            }
+            if (apple.x === snake[i].x && apple.y === snake[i].y) { encimaDeLaSerpiente = true; break; }
         }
     }
 }
 
 function reiniciarJuego() {
-    puntuacion = 0;
+    puntuacion = 0; manzanasNormalesContador = 0;
     velocidadActual = VELOCIDAD_INICIAL;
+    powerupActivo = null; frutaEspecial.active = false;
     scoreText.innerText = puntuacion;
     document.getElementById('pauseBtn').innerText = "⏸️";
-    snake = [
-        { x: 160, y: 160 },
-        { x: 140, y: 160 },
-        { x: 120, y: 160 }
-    ];
-    dx = 20;
-    dy = 0;
+    snake = [{ x: 160, y: 160 }, { x: 140, y: 160 }, { x: 120, y: 160 }];
+    dx = 20; dy = 0; particles = [];
     generarNuevaManzana();
 }
     </script>
