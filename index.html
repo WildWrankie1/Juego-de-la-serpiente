@@ -20,18 +20,18 @@
             transition: background 0.3s;
         }
 
-        /* 🎨 PALETAS DE COLORES (Variables CSS de Temas) */
+        /* 🎨 PALETAS DE COLORES (Variables CSS - Importante usar RGB para efectos de transparencia de cola) */
         .theme-cyberpunk {
             background: radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%);
-            --color-ui: #00fff2; --color-head: #00fff2; --color-body: #00ff88; --color-apple: #ff0055;
+            --color-ui: #00fff2; --color-head: #00fff2; --color-body: rgb(0, 255, 136); --color-apple: #ff0055;
         }
         .theme-matrix {
             background: #000;
-            --color-ui: #32CD32; --color-head: #32CD32; --color-body: #008000; --color-apple: #adff2f;
+            --color-ui: #32CD32; --color-head: #32CD32; --color-body: rgb(0, 128, 0); --color-apple: #adff2f;
         }
         .theme-synthwave {
             background: linear-gradient(180deg, #2d132c 0%, #190918 100%);
-            --color-ui: #ff6e00; --color-head: #ff6e00; --color-body: #800080; --color-apple: #ffc900;
+            --color-ui: #ff6e00; --color-head: #ff6e00; --color-body: rgb(128, 0, 128); --color-apple: #ffc900;
         }
 
         /* 🏆 Contenedor del Marcador y Pausa */
@@ -50,7 +50,7 @@
         }
         #pauseBtn:active { background-color: var(--color-apple); color: #fff; box-shadow: 0 0 20px var(--color-apple); }
 
-        /* 🎮 Menús Superiores: Temas, Modos de Juego y Récords */
+        /* 🎮 Menús Superiores Configurados */
         .menu-row { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 12px; }
         .menu-subrow { display: flex; align-items: center; gap: 15px; }
         .theme-menu { display: flex; gap: 8px; }
@@ -92,11 +92,34 @@
         .shake-light { animation: shake-light 0.12s ease-in-out; }
         .shake-heavy { animation: shake-heavy 0.25s ease-in-out; }
 
+        /* 📺 FILTRO DE PANTALLA CRT ARCADE (Líneas de escaneo y parpadeo de fósforo) */
+        .canvas-wrapper {
+            position: relative;
+            max-width: 85vw; max-height: 85vw;
+        }
+        .canvas-wrapper::after {
+            content: " ";
+            display: block; position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            /* Rejilla de scanlines horizontales */
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.04));
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none; /* Traspasa los clics táctiles al canvas sin bloquearlos */
+            border-radius: 10px;
+            animation: crt-flicker 0.2s infinite;
+        }
+        @keyframes crt-flicker {
+            0% { opacity: 0.97; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
         /* 🎮 El Canvas */
         canvas {
             background-color: #05050a; border: 4px solid var(--color-body);
             border-radius: 10px; box-shadow: 0 0 25px var(--color-body);
-            max-width: 85vw; max-height: 85vw;
+            display: block; width: 100%; height: 100%;
         }
 
         /* 🕹️ Cruceta Móvil */
@@ -147,7 +170,9 @@
         <button id="pauseBtn" onclick="togglePausa()">⏸️</button>
     </div>
     
-    <canvas id="gameCanvas" width="400" height="400"></canvas>
+    <div class="canvas-wrapper">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
     
     <div class="controls">
         <div class="btn" id="btn-up" onclick="cambiarDireccion('ArrowUp')">🔼</div>
@@ -170,23 +195,29 @@ let snake = [
 ];
 
 let apple = { x: 300, y: 200 };
-let dx = 20;
-let dy = 0;
-let actualDx = 20;
-let actualDy = 0;
-let puntuacion = 0;
-let estadoJuego = 'INICIO';
-let audioCtx = null;
+let dx = 20; let dy = 0; let actualDx = 20; let actualDy = 0;
+let puntuacion = 0; let estadoJuego = 'INICIO'; let audioCtx = null;
 
 const VELOCIDAD_INICIAL = 130;
 let velocidadActual = VELOCIDAD_INICIAL;
 
 let modoJuego = 'CLASICO';
 
+// 🍌 FRUTAS ESPECIALES
 let manzanasNormalesContador = 0;
 let frutaEspecial = { x: -100, y: -100, type: null, active: false, ticksMax: 0, ticksLeft: 0 };
-let powerupActivo = null; 
-let powerupTicksLeft = 0;
+let powerupActivo = null; let powerupTicksLeft = 0;
+
+// 🔥 VARIABLES DEL SISTEMA DE COMBOS
+let comboMultiplicador = 1;
+let comboTicksMax = 0;
+let comboTicksLeft = 0;
+
+// 🎖️ SISTEMA DE MEDALLAS / LOGROS
+let wrapAroundContador = 0; // Rastreador específico para modo Pacman
+let logros = localStorage.getItem('snakeLogros_v1')
+    ? JSON.parse(localStorage.getItem('snakeLogros_v1'))
+    : { velocidad: false, inmortal: false, escapista: false };
 
 let colorPaleta = {};
 function actualizarColoresJS() {
@@ -200,11 +231,10 @@ function actualizarColoresJS() {
 }
 actualizarColoresJS();
 
-// 💾 CLAVE ACTUALIZADA A V3 CON NUEVOS MEJORES RÉCORDS DE FÁBRICA
 let tablaPosiciones = localStorage.getItem('snakeLeaderboard_v3') 
     ? JSON.parse(localStorage.getItem('snakeLeaderboard_v3')) 
     : [
-        { name: "ANTARES",  score: 1500 },
+        { name: "FRANK",  score: 500 },
         { name: "SNAKE",  score: 400 },
         { name: "CYBER",  score: 300 },
         { name: "PLAYER", score: 200 },
@@ -216,10 +246,8 @@ let particles = [];
 class Particle {
     constructor(x, y, color) {
         this.x = x; this.y = y; this.color = color;
-        this.vx = (Math.random() - 0.5) * 8; 
-        this.vy = (Math.random() - 0.5) * 8; 
-        this.life = 1.0; 
-        this.decay = Math.random() * 0.04 + 0.03;
+        this.vx = (Math.random() - 0.5) * 8; this.vy = (Math.random() - 0.5) * 8; 
+        this.life = 1.0; this.decay = Math.random() * 0.04 + 0.03;
     }
     update() { this.x += this.vx; this.y += this.vy; this.vx *= 0.96; this.vy *= 0.96; this.life -= this.decay; }
     draw() {
@@ -245,10 +273,8 @@ function toggleLeaderboard() {
     iniciarAudio();
     if (estadoJuego === 'LEADERBOARD') {
         estadoJuego = 'INICIO';
-        document.getElementById('recordsBtn').classList.remove('active');
     } else {
         estadoJuego = 'LEADERBOARD';
-        document.getElementById('recordsBtn').classList.add('active');
     }
 }
 
@@ -321,6 +347,7 @@ function mostrarJuego() {
     }
     ctx.globalAlpha = 1;
 
+    // ⏳ GESTIÓN DE TEMPORIZADORES INDEPENDIENTES
     if (estadoJuego === 'JUGANDO') {
         if (frutaEspecial.active) {
             frutaEspecial.ticksLeft--;
@@ -330,12 +357,24 @@ function mostrarJuego() {
             powerupTicksLeft--;
             if (powerupTicksLeft <= 0) powerupActivo = null;
         }
+        // Reducción del contador del combo activo
+        if (comboMultiplicador > 1) {
+            comboTicksLeft--;
+            if (comboTicksLeft <= 0) comboMultiplicador = 1; // El combo expira
+        }
     }
 
     if (estadoJuego === 'LEADERBOARD') {
         document.getElementById('recordsBtn').classList.add('active');
     } else {
         document.getElementById('recordsBtn').classList.remove('active');
+    }
+
+    // Dibujar letrero flotante de Combo en el canvas
+    if (estadoJuego === 'JUGANDO' && comboMultiplicador > 1) {
+        ctx.save(); ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.ui;
+        ctx.fillStyle = colorPaleta.ui; ctx.font = "italic bold 15px 'Segoe UI', Arial"; ctx.textAlign = "left";
+        ctx.fillText(`COMBO X${comboMultiplicador}! 🔥`, 15, 30); ctx.restore();
     }
 
     if (estadoJuego === 'INICIO') { dibujarPantallaInicio(); return; }
@@ -349,47 +388,64 @@ function mostrarJuego() {
     let chocoPared = (newX < 0 || newX >= 400 || newY < 0 || newY >= 400);
     if (chocoPared) {
         if (modoJuego === 'CLASICO') {
-            sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; verificarYGuardarRecord(); return;
+            sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; 
+            evaluarLogroInmortal(); verificarYGuardarRecord(); return;
         } else {
+            // Reubicación Pacman e incrementador del contador de saltos
             if (newX < 0) newX = 380; if (newX >= 400) newX = 0;
             if (newY < 0) newY = 380; if (newY >= 400) newY = 0;
+            wrapAroundContador++;
+            if (wrapAroundContador >= 10 && !logros.escapista) desbloquearLogro('escapista');
         }
     }
 
     if (chocoConsigoMisma(newX, newY)) {
-        sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; verificarYGuardarRecord(); return;
+        sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; 
+        evaluarLogroInmortal(); verificarYGuardarRecord(); return;
     }
 
     snake.unshift({ x: newX, y: newY });
 
+    // 🍏 DETECCIÓN: MANZANA NORMAL
     if (newX === apple.x && newY === apple.y) {
-        let puntosGanados = (powerupActivo === 'chili') ? 30 : 10; 
-        puntuacion += puntosGanados;
+        // Ejecución del multiplicador del Combo
+        ejecutarCadenaCombo();
+        
+        let basePuntos = (powerupActivo === 'chili') ? 30 : 10; 
+        
+        // Desbloqueo automático del logro de velocidad si comes bajo los efectos de la guindilla turbo
+        if (powerupActivo === 'chili' && !logros.velocidad) desbloquearLogro('velocidad');
+
+        puntuacion += (basePuntos * comboMultiplicador);
         scoreText.innerText = puntuacion;
-        sonarComer('normal');
-        sacudirTablero('light');
+        sonarComer('normal'); sacudirTablero('light');
         
         crearExplosionParticulas(apple.x, apple.y, colorPaleta.apple);
 
         manzanasNormalesContador++;
         if (manzanasNormalesContador % 5 === 0) generarFrutaEspecial();
 
-        ajustarVelocidadDinamica();
-        generarNuevaManzana();
+        ajustarVelocidadDinamica(); generarNuevaManzana();
     } 
+    // 🍌 DETECCIÓN: FRUTA ESPECIAL
     else if (frutaEspecial.active && newX === frutaEspecial.x && newY === frutaEspecial.y) {
-        frutaEspecial.active = false;
-        sacudirTablero('light');
+        frutaEspecial.active = false; sacudirTablero('light');
+        ejecutarCadenaCombo();
+        
+        let basePuntosSpec = (frutaEspecial.type === 'banana') ? 20 : 30;
         
         if (frutaEspecial.type === 'banana') {
-            puntuacion += 20; sonarComer('banana'); powerupActivo = 'banana';
+            sonarComer('banana'); powerupActivo = 'banana';
             crearExplosionParticulas(frutaEspecial.x, frutaEspecial.y, "#00d2ff");
             powerupTicksLeft = Math.floor(5000 / velocidadActual); 
         } else {
-            puntuacion += 30; sonarComer('chili'); powerupActivo = 'chili';
+            sonarComer('chili'); powerupActivo = 'chili';
+            if (!logros.velocidad) desbloquearLogro('velocidad');
             crearExplosionParticulas(frutaEspecial.x, frutaEspecial.y, "#ff3300");
             powerupTicksLeft = Math.floor(4000 / velocidadActual); 
         }
+        
+        puntuacion += (basePuntosSpec * comboMultiplicador);
         scoreText.innerText = puntuacion;
         ajustarVelocidadDinamica();
     } else {
@@ -397,8 +453,57 @@ function mostrarJuego() {
     }
 }
 
+// 🔥 CONTROLADOR MECÁNICO DE COMBOS
+function ejecutarCadenaCombo() {
+    if (comboTicksLeft > 0) {
+        comboMultiplicador++; // Encadena combo
+    } else {
+        comboMultiplicador = 1; // Primer golpe
+    }
+    // Da 3 segundos exactos para encontrar la siguiente fruta
+    comboTicksMax = Math.floor(3000 / velocidadActual);
+    comboTicksLeft = comboTicksMax;
+}
+
+// 🎖️ GESTORES DE LOGROS
+function desbloquearLogro(id) {
+    logros[id] = true;
+    localStorage.setItem('snakeLogros_v1', JSON.stringify(logros));
+    sacudirTablero('light'); // Mini feedback táctil de recompensa
+}
+function evaluarLogroInmortal() {
+    if (modoJuego === 'CLASICO' && puntuacion >= 300 && !logros.inmortal) {
+        desbloquearLogro('inmortal');
+    }
+}
+
+// PINTOR INTEGRADO DE MEDALLAS EN LOS MENÚS
+function dibujarMedallasUI(yBase) {
+    ctx.save(); ctx.textAlign = "center"; ctx.font = "bold 12px 'Segoe UI', Arial";
+    ctx.fillStyle = "#ffaa00"; ctx.fillText("🎖️ MEDALLAS LOGRADAS 🎖️", canvas.width / 2, yBase);
+
+    // Medalla 1: Velocidad (Chili Turbo)
+    ctx.font = "18px Arial"; ctx.fillStyle = logros.velocidad ? "#ff3300" : "#222";
+    ctx.fillText("⚡", canvas.width / 2 - 65, yBase + 24);
+    ctx.font = "bold 9px Arial"; ctx.fillStyle = logros.velocidad ? "#fff" : "#444";
+    ctx.fillText("TURBO", canvas.width / 2 - 65, yBase + 36);
+
+    // Medalla 2: Inmortal (300 Pts clásico)
+    ctx.font = "18px Arial"; ctx.fillStyle = logros.inmortal ? "#00fff2" : "#222";
+    ctx.fillText("🛡️", canvas.width / 2, yBase + 24);
+    ctx.font = "bold 9px Arial"; ctx.fillStyle = logros.inmortal ? "#fff" : "#444";
+    ctx.fillText("INMORTAL", canvas.width / 2, yBase + 36);
+
+    // Medalla 3: Escapista (10 Saltos Pacman)
+    ctx.font = "18px Arial"; ctx.fillStyle = logros.escapista ? "#ffaa00" : "#222";
+    ctx.fillText("🌀", canvas.width / 2 + 65, yBase + 24);
+    ctx.font = "bold 9px Arial"; ctx.fillStyle = logros.escapista ? "#fff" : "#444";
+    ctx.fillText("ESCAPISTA", canvas.width / 2 + 65, yBase + 36);
+    ctx.restore();
+}
+
 function ajustarVelocidadDinamica() {
-    let baseVel = Math.max(65, VELOCIDAD_INICIAL - (Math.floor(puntuacion / 40) * 8));
+    let baseVel = Math.max(65, VELOCIDAD_INICIAL - (Math.floor(puntuacion / 50) * 8));
     if (powerupActivo === 'banana') {
         velocidadActual = baseVel + 35; 
     } else if (powerupActivo === 'chili') {
@@ -411,8 +516,7 @@ function ajustarVelocidadDinamica() {
 function generarFrutaEspecial() {
     let ocupado = true;
     while (ocupado) {
-        frutaEspecial.x = Math.floor(Math.random() * 20) * 20;
-        frutaEspecial.y = Math.floor(Math.random() * 20) * 20;
+        frutaEspecial.x = Math.floor(Math.random() * 20) * 20; frutaEspecial.y = Math.floor(Math.random() * 20) * 20;
         ocupado = (frutaEspecial.x === apple.x && frutaEspecial.y === apple.y);
         for (let i = 0; i < snake.length; i++) {
             if (frutaEspecial.x === snake[i].x && frutaEspecial.y === snake[i].y) ocupado = true;
@@ -474,68 +578,69 @@ function dibujarPantallaPausa() {
     ctx.fillText("JUEGO EN PAUSA", canvas.width / 2, 208);
 }
 
-// 🎨 LEADERBOARD ADAPTADO A 10 CARACTERES (Alineación a -140)
 function dibujarPantallaLeaderboard() {
     ctx.shadowBlur = 15; ctx.shadowColor = "#ffaa00";
     ctx.fillStyle = "rgba(15, 10, 25, 0.95)"; ctx.strokeStyle = "#ffaa00"; ctx.lineWidth = 3;
     ctx.fillRect(30, 20, 340, 360); ctx.strokeRect(30, 20, 340, 360);
 
     ctx.shadowBlur = 0; ctx.fillStyle = "#ffaa00"; ctx.font = "bold 24px 'Segoe UI', Arial"; ctx.textAlign = "center";
-    ctx.fillText("🏆 HALL OF FAME 🏆", canvas.width / 2, 70);
+    ctx.fillText("🏆 HALL OF FAME 🏆", canvas.width / 2, 60);
 
-    ctx.font = "bold 16px 'Courier New', Courier, monospace"; ctx.textAlign = "left";
+    ctx.font = "bold 15px 'Courier New', Courier, monospace"; ctx.textAlign = "left";
     for (let i = 0; i < 5; i++) {
         let jugador = tablaPosiciones[i] || { name: "----------", score: 0 };
-        let yPos = 135 + (i * 38);
-        ctx.fillStyle = "#fff";
+        let yPos = 110 + (i * 32); ctx.fillStyle = "#fff";
         let puesto = i + 1;
-        // padEnd(11) distribuye perfectamente los puntos rellenando los 10 caracteres del nombre
         let textoFila = `${puesto}. ${jugador.name.padEnd(11, '.')} ${String(jugador.score).padStart(4, '0')} PTS`;
         ctx.fillText(textoFila, canvas.width / 2 - 140, yPos);
     }
+    // Renderizado de las medallas integradas
+    dibujarMedallasUI(280);
+
     ctx.textAlign = "center"; ctx.font = "italic 13px 'Segoe UI', Arial"; ctx.fillStyle = "#777";
-    ctx.fillText("Pulsa el botón de nuevo o Espacio para volver", canvas.width / 2, 355);
+    ctx.fillText("Pulsa el botón de nuevo o Espacio para volver", canvas.width / 2, 362);
 }
 
-// 🎨 GAMEOVER ADAPTADO A 10 CARACTERES (Alineación a -140)
 function dibujarPantallaGameOver() {
     ctx.shadowBlur = 15; ctx.shadowColor = colorPaleta.apple;
     ctx.fillStyle = "rgba(15, 10, 25, 0.95)"; ctx.strokeStyle = colorPaleta.apple; ctx.lineWidth = 3;
     ctx.fillRect(30, 20, 340, 360); ctx.strokeRect(30, 20, 340, 360);
     
-    ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.apple; ctx.font = "bold 26px 'Segoe UI', Arial"; ctx.textAlign = "center";
-    ctx.fillText("¡GAME OVER! 😵", canvas.width / 2, 60);
-    ctx.fillStyle = "#fff"; ctx.font = "15px 'Segoe UI', Arial";
-    ctx.fillText("Tu puntuación: " + puntuacion, canvas.width / 2, 90);
+    ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.apple; ctx.font = "bold 24px 'Segoe UI', Arial"; ctx.textAlign = "center";
+    ctx.fillText("¡GAME OVER! 😵", canvas.width / 2, 52);
+    ctx.fillStyle = "#fff"; ctx.font = "14px 'Segoe UI', Arial";
+    ctx.fillText("Tu puntuación: " + puntuacion, canvas.width / 2, 78);
     
-    ctx.fillStyle = "#ffaa00"; ctx.font = "bold 16px 'Segoe UI', Arial";
-    ctx.fillText("🏆 TOP 5 MEJORES JUGADORES 🏆", canvas.width / 2, 130);
+    ctx.fillStyle = "#ffaa00"; ctx.font = "bold 15px 'Segoe UI', Arial";
+    ctx.fillText("🏆 TOP 5 MEJORES JUGADORES 🏆", canvas.width / 2, 115);
     
-    ctx.font = "bold 16px 'Courier New', Courier, monospace"; ctx.textAlign = "left";
+    ctx.font = "bold 15px 'Courier New', Courier, monospace"; ctx.textAlign = "left";
     for (let i = 0; i < 5; i++) {
         let jugador = tablaPosiciones[i] || { name: "----------", score: 0 };
-        let yPos = 170 + (i * 30);
+        let yPos = 145 + (i * 26);
         ctx.fillStyle = (jugador.score === puntuacion && jugador.score > 0) ? colorPaleta.ui : "#fff";
         let puesto = i + 1;
         let textoFila = `${puesto}. ${jugador.name.padEnd(11, '.')} ${String(jugador.score).padStart(4, '0')} PTS`;
         ctx.fillText(textoFila, canvas.width / 2 - 140, yPos); 
     }
-    ctx.textAlign = "center"; ctx.font = "italic 13px 'Segoe UI', Arial"; ctx.fillStyle = "#777";
-    ctx.fillText("Pulsa Espacio o el D-pad para reiniciar", canvas.width / 2, 355);
+    // Renderizado de las medallas integradas
+    dibujarMedallasUI(290);
+
+    ctx.textAlign = "center"; ctx.font = "italic 12px 'Segoe UI', Arial"; ctx.fillStyle = "#777";
+    ctx.fillText("Pulsa Espacio o el D-pad para reiniciar", canvas.width / 2, 365);
 }
 
-// 💾 CORTE DE NOMBRE CONFIGURADO A 10 CARACTERES MÁXIMO
 function verificarYGuardarRecord() {
     if (puntuacion > 0 && (tablaPosiciones.length < 5 || puntuacion >= tablaPosiciones[tablaPosiciones.length - 1].score)) {
         setTimeout(() => {
             let iniciales = prompt("¡ENTRASTE AL TOP 5! 👑\nIntroduce tu nombre (máx. 10 letras):");
             if (!iniciales) iniciales = "PLAYER";
-            iniciales = iniciales.substring(0, 10).toUpperCase(); // 👈 Modificado de 6 a 10 letras
+            iniciales = iniciales.substring(0, 10).toUpperCase(); 
             
             tablaPosiciones.push({ name: iniciales, score: puntuacion });
             tablaPosiciones.sort((a, b) => b.score - a.score);
             tablaPosiciones = tablaPosiciones.slice(0, 5);
-            localStorage.setItem('snakeLeaderboard_v3', JSON.stringify(tablaPosiciones)); // 👈 Clave v3
+            localStorage.setItem('snakeLeaderboard_v3', JSON.stringify(tablaPosiciones)); 
             mostrarJuego();
         }, 80);
     }
@@ -601,7 +706,7 @@ function generarNuevaManzana() {
 }
 
 function reiniciarJuego() {
-    puntuacion = 0; manzanasNormalesContador = 0;
+    puntuacion = 0; manzanasNormalesContador = 0; wrapAroundContador = 0; comboMultiplicador = 1;
     velocidadActual = VELOCIDAD_INICIAL;
     powerupActivo = null; frutaEspecial.active = false;
     scoreText.innerText = puntuacion;
