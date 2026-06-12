@@ -4,23 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Snake Neon Edition 🐍✨</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
     <style>
-        /* 🌌 Fondo futurista base */
         body {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #fff;
-            overflow: hidden;
-            touch-action: manipulation;
-            transition: background 0.3s;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff; overflow: hidden; touch-action: manipulation; transition: background 0.3s;
         }
 
-        /* 🎨 PALETAS DE COLORES (Variables CSS - Importante usar RGB para efectos de transparencia de cola) */
+        /* 🎨 TEMAS CSS */
         .theme-cyberpunk {
             background: radial-gradient(circle, #1a1a2e 0%, #0f0f1a 100%);
             --color-ui: #00fff2; --color-head: #00fff2; --color-body: rgb(0, 255, 136); --color-apple: #ff0055;
@@ -34,114 +29,67 @@
             --color-ui: #ff6e00; --color-head: #ff6e00; --color-body: rgb(128, 0, 128); --color-apple: #ffc900;
         }
 
-        /* 🏆 Contenedor del Marcador y Pausa */
         .score-container {
             display: flex; align-items: center; justify-content: center;
             font-size: 20px; font-weight: bold; letter-spacing: 1px;
-            margin-bottom: 10px; text-transform: uppercase;
+            margin-bottom: 8px; text-transform: uppercase;
             text-shadow: 0 0 10px var(--color-ui); color: var(--color-ui);
         }
 
         #pauseBtn {
-            background: none; border: 2px solid var(--color-apple);
-            color: var(--color-apple); border-radius: 8px;
-            padding: 2px 8px; cursor: pointer; font-size: 16px; margin-left: 20px;
-            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2); transition: background-color 0.1s;
+            background: none; border: 2px solid var(--color-apple); color: var(--color-apple);
+            border-radius: 8px; padding: 2px 8px; cursor: pointer; font-size: 16px; margin-left: 15px;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.2);
         }
-        #pauseBtn:active { background-color: var(--color-apple); color: #fff; box-shadow: 0 0 20px var(--color-apple); }
 
-        /* 🎮 Menús Superiores Configurados */
-        .menu-row { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 12px; }
-        .menu-subrow { display: flex; align-items: center; gap: 15px; }
-        .theme-menu { display: flex; gap: 8px; }
+        /* 🎮 Menús de Configuración Avanzados */
+        .menu-row { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .menu-subrow { display: flex; align-items: center; gap: 12px; }
+        .theme-menu { display: flex; gap: 6px; }
         .theme-btn {
-            width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff;
-            cursor: pointer; transition: transform 0.1s; box-shadow: 0 0 5px rgba(255,255,255,0.5);
+            width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; cursor: pointer;
         }
         .theme-btn.active { border-color: var(--color-ui); box-shadow: 0 0 10px var(--color-ui); }
 
-        .mode-menu { font-size: 12px; font-weight: bold; text-shadow: 0 0 5px var(--color-ui); color: var(--color-ui); }
+        .mode-menu { font-size: 11px; font-weight: bold; text-shadow: 0 0 5px var(--color-ui); color: var(--color-ui); }
         .mode-btn {
             background: none; border: 1.5px solid var(--color-ui); color: var(--color-ui);
-            padding: 2px 8px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 11px;
-            transition: all 0.2s; margin-left: 4px;
+            padding: 2px 6px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 11px;
         }
         .mode-btn.active { background: var(--color-ui); color: #05050a; box-shadow: 0 0 10px var(--color-ui); }
         
         #recordsBtn { border-color: #ffaa00; color: #ffaa00; text-shadow: 0 0 5px #ffaa00; }
         #recordsBtn.active { background: #ffaa00; color: #05050a; box-shadow: 0 0 10px #ffaa00; }
+        #shopBtn { border-color: #e200ff; color: #e200ff; text-shadow: 0 0 5px #e200ff; }
+        #shopBtn.active { background: #e200ff; color: #05050a; box-shadow: 0 0 10px #e200ff; }
 
-        /* 💥 EFECTO SCREEN SHAKE */
-        @keyframes shake-light {
-            0% { transform: translate(0, 0); }
-            20% { transform: translate(-2px, 1px); }
-            40% { transform: translate(2px, -1px); }
-            60% { transform: translate(-1px, -1px); }
-            80% { transform: translate(1px, 1px); }
-            100% { transform: translate(0, 0); }
-        }
-        @keyframes shake-heavy {
-            0% { transform: translate(0, 0); }
-            10% { transform: translate(-4px, 4px); }
-            30% { transform: translate(5px, -3px); }
-            50% { transform: translate(-5px, -4px); }
-            70% { transform: translate(4px, 3px); }
-            90% { transform: translate(-1px, 1px); }
-            100% { transform: translate(0, 0); }
-        }
-        .shake-light { animation: shake-light 0.12s ease-in-out; }
-        .shake-heavy { animation: shake-heavy 0.25s ease-in-out; }
-
-        /* 📺 FILTRO DE PANTALLA CRT ARCADE (Líneas de escaneo y parpadeo de fósforo) */
-        .canvas-wrapper {
-            position: relative;
-            max-width: 85vw; max-height: 85vw;
-        }
+        /* 📺 FILTRO DE PANTALLA CRT */
+        .canvas-wrapper { position: relative; max-width: 85vw; max-height: 85vw; }
         .canvas-wrapper::after {
-            content: " ";
-            display: block; position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            /* Rejilla de scanlines horizontales */
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.04));
-            background-size: 100% 4px, 6px 100%;
-            pointer-events: none; /* Traspasa los clics táctiles al canvas sin bloquearlos */
-            border-radius: 10px;
-            animation: crt-flicker 0.2s infinite;
+            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 4px, 6px 100%; pointer-events: none; border-radius: 10px; animation: crt-flicker 0.2s infinite;
         }
-        @keyframes crt-flicker {
-            0% { opacity: 0.97; }
-            50% { opacity: 1; }
-            100% { opacity: 0.98; }
-        }
+        @keyframes crt-flicker { 0% { opacity: 0.98; } 50% { opacity: 1; } 100% { opacity: 0.99; } }
 
-        /* 🎮 El Canvas */
-        canvas {
-            background-color: #05050a; border: 4px solid var(--color-body);
-            border-radius: 10px; box-shadow: 0 0 25px var(--color-body);
-            display: block; width: 100%; height: 100%;
-        }
+        /* 💥 SCREEN SHAKE ANIMATIONS */
+        @keyframes shake-light { 0%, 100% { transform: translate(0,0); } 20% { transform: translate(-2px,1px); } 40% { transform: translate(2px,-1px); } }
+        @keyframes shake-heavy { 0%, 100% { transform: translate(0,0); } 10% { transform: translate(-4px,4px); } 50% { transform: translate(-5px,-4px); } 90% { transform: translate(-1px,1px); } }
+        .shake-light { animation: shake-light 0.1s ease-in-out; }
+        .shake-heavy { animation: shake-heavy 0.2s ease-in-out; }
 
-        /* 🕹️ Cruceta Móvil */
-        .controls {
-            display: grid; grid-template-columns: repeat(3, 85px); 
-            grid-template-rows: repeat(3, 85px); gap: 12px; margin-top: 20px; margin-bottom: 15px;
-        }
+        canvas { background-color: #05050a; border: 4px solid var(--color-body); border-radius: 10px; box-shadow: 0 0 25px var(--color-body); display: block; width: 100%; height: 100%; }
+
+        .controls { display: grid; grid-template-columns: repeat(3, 85px); grid-template-rows: repeat(3, 85px); gap: 12px; margin-top: 15px; margin-bottom: 10px; }
         .btn {
-            background-color: rgba(5, 5, 10, 0.85); border: 2.5px solid var(--color-ui);
-            border-radius: 20px; color: var(--color-ui); font-size: 28px;
-            display: flex; justify-content: center; align-items: center; cursor: pointer;
-            box-shadow: 0 0 12px rgba(0, 255, 242, 0.2); user-select: none;
-            -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
-            transition: background-color 0.1s, transform 0.05s;
+            background-color: rgba(5, 5, 10, 0.85); border: 2.5px solid var(--color-ui); border-radius: 20px; color: var(--color-ui); font-size: 28px;
+            display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 0 12px rgba(0, 255, 242, 0.2);
+            user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; transition: background-color 0.1s, transform 0.05s;
         }
         .btn:active { background-color: var(--color-ui); color: #05050a; box-shadow: 0 0 25px var(--color-ui); transform: scale(0.95); }
-        #btn-up    { grid-column: 2; grid-row: 1; }
-        #btn-left  { grid-column: 1; grid-row: 2; }
-        #btn-right { grid-column: 3; grid-row: 2; }
-        #btn-down  { grid-column: 2; grid-row: 3; }
-
-        .instructions { margin-top: 5px; font-size: 12px; color: #555; text-align: center; }
+        #btn-up { grid-column: 2; grid-row: 1; } #btn-left { grid-column: 1; grid-row: 2; } #btn-right { grid-column: 3; grid-row: 2; } #btn-down { grid-column: 2; grid-row: 3; }
+        .instructions { margin-top: 5px; font-size: 11px; color: #444; text-align: center; }
         @media (max-width: 600px) { .instructions { display: none; } }
     </style>
 </head>
@@ -160,8 +108,9 @@
                 <button id="mode-pacman" class="mode-btn" onclick="setModo('PACMAN')">PAC-MAN</button>
             </div>
         </div>
-        <div>
-            <button id="recordsBtn" class="mode-btn" onclick="toggleLeaderboard()">🏆 VER RÉCORDS</button>
+        <div class="menu-subrow">
+            <button id="recordsBtn" class="mode-btn" onclick="toggleLeaderboard()">🏆 RÉCORDS</button>
+            <button id="shopBtn" class="mode-btn" onclick="toggleShop()">🏪 TIENDA</button>
         </div>
     </div>
 
@@ -188,36 +137,83 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const scoreText = document.getElementById('scoreText');
 
-let snake = [
-    { x: 160, y: 160 },
-    { x: 140, y: 160 },
-    { x: 120, y: 160 }
-];
+// 🌐 MEJORA 3: AJUSTE DE FIREBASE DE GOOGLE (MÓDULO DE LA NUBE GLOBAL)
+// Reemplaza los datos dentro de este objeto cuando crees tu proyecto en Firebase Console
+const firebaseConfig = {
+    apiKey: "SINDATOS",
+    authDomain: "SINDATOS",
+    databaseURL: "SINDATOS",
+    projectId: "SINDATOS",
+    storageBucket: "SINDATOS",
+    messagingSenderId: "SINDATOS",
+    appId: "SINDATOS"
+};
 
+let firebaseActivo = false;
+if (firebaseConfig.apiKey !== "SINDATOS") {
+    firebase.initializeApp(firebaseConfig);
+    firebaseActivo = true;
+    conectarYEscucharNube();
+}
+
+let snake = [{ x: 160, y: 160 }, { x: 140, y: 160 }, { x: 120, y: 160 }];
 let apple = { x: 300, y: 200 };
 let dx = 20; let dy = 0; let actualDx = 20; let actualDy = 0;
 let puntuacion = 0; let estadoJuego = 'INICIO'; let audioCtx = null;
 
 const VELOCIDAD_INICIAL = 130;
 let velocidadActual = VELOCIDAD_INICIAL;
-
 let modoJuego = 'CLASICO';
 
-// 🍌 FRUTAS ESPECIALES
+// 🏪 MEJORA 2: VARIABLES DE LA TIENDA DE CRÉDITOS NEÓN
+let creditosNeon = localStorage.getItem('snakeCredits') ? parseInt(localStorage.getItem('snakeCredits')) : 0;
+let tiendaInventario = localStorage.getItem('snakeShop_v1') 
+    ? JSON.parse(localStorage.getItem('snakeShop_v1')) 
+    : { skinCorona: false, particulaFuego: false };
+
+let skinEquipada = false;       // Activa cabeza dorada con corona
+let particulaEquipada = false;  // Activa chispas de fuego rojo
+
+// 🎵 MEJORA 1: MOTOR DE MÚSICA DE FONDO PROCEDURAL (SYNTHWAVE BASS)
+let synthMusicToken = null;
+let synthNoteIndex = 0;
+const cyberpunkBassNotes = [110.00, 110.00, 130.81, 97.99, 110.00, 110.00, 146.83, 123.47]; // A2, A2, C3, G2, A2, A2, D3, B2
+
+function tocarPasoMusica() {
+    if (estadoJuego !== 'JUGANDO') return;
+    iniciarAudio();
+    if (!audioCtx) return;
+
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    let filtro = audioCtx.createBiquadFilter();
+
+    osc.type = 'sawtooth'; // Sonido sintetizador clásico de los 80
+    osc.frequency.setValueAtTime(cyberpunkBassNotes[synthNoteIndex], audioCtx.currentTime);
+
+    filtro.type = 'lowpass';
+    filtro.frequency.setValueAtTime(powerupActivo === 'chili' ? 700 : 450, audioCtx.currentTime); // El filtro se abre en modo turbo
+
+    gain.gain.setValueAtTime(0.015, audioCtx.currentTime); // Volumen sutil de fondo
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
+
+    osc.connect(filtro); filtro.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+
+    synthNoteIndex = (synthNoteIndex + 1) % cyberpunkBassNotes.length;
+
+    // El tempo se acelera automáticamente con el ritmo del juego
+    let tempo = velocidadActual * 2;
+    synthMusicToken = setTimeout(tocarPasoMusica, tempo);
+}
+
+// Mecánicas de juego base heredadas
 let manzanasNormalesContador = 0;
 let frutaEspecial = { x: -100, y: -100, type: null, active: false, ticksMax: 0, ticksLeft: 0 };
 let powerupActivo = null; let powerupTicksLeft = 0;
-
-// 🔥 VARIABLES DEL SISTEMA DE COMBOS
-let comboMultiplicador = 1;
-let comboTicksMax = 0;
-let comboTicksLeft = 0;
-
-// 🎖️ SISTEMA DE MEDALLAS / LOGROS
-let wrapAroundContador = 0; // Rastreador específico para modo Pacman
-let logros = localStorage.getItem('snakeLogros_v1')
-    ? JSON.parse(localStorage.getItem('snakeLogros_v1'))
-    : { velocidad: false, inmortal: false, escapista: false };
+let comboMultiplicador = 1; let comboTicksMax = 0; let comboTicksLeft = 0;
+let wrapAroundContador = 0;
+let logros = localStorage.getItem('snakeLogros_v1') ? JSON.parse(localStorage.getItem('snakeLogros_v1')) : { velocidad: false, inmortal: false, escapista: false };
 
 let colorPaleta = {};
 function actualizarColoresJS() {
@@ -233,53 +229,68 @@ actualizarColoresJS();
 
 let tablaPosiciones = localStorage.getItem('snakeLeaderboard_v3') 
     ? JSON.parse(localStorage.getItem('snakeLeaderboard_v3')) 
-    : [
-        { name: "FRANK",  score: 500 },
-        { name: "SNAKE",  score: 400 },
-        { name: "CYBER",  score: 300 },
-        { name: "PLAYER", score: 200 },
-        { name: "NEWBIE", score: 100 }
-      ];
+    : [ { name: "FRANK", score: 500 }, { name: "SNAKE", score: 400 }, { name: "CYBER", score: 300 }, { name: "PLAYER", score: 200 }, { name: "NEWBIE", score: 100 } ];
 
-// ✨ SISTEMA DE PARTÍCULAS
+// ✨ SISTEMA DE PARTÍCULAS MEJORADO (Soporta chispas de fuego compradas)
 let particles = [];
 class Particle {
-    constructor(x, y, color) {
-        this.x = x; this.y = y; this.color = color;
-        this.vx = (Math.random() - 0.5) * 8; this.vy = (Math.random() - 0.5) * 8; 
+    constructor(x, y, color, tipo = 'normal') {
+        this.x = x; this.y = y; this.color = color; this.tipo = tipo;
+        this.vx = (Math.random() - 0.5) * (tipo === 'fuego' ? 6 : 8); 
+        this.vy = (Math.random() - 0.5) * (tipo === 'fuego' ? 9 : 8) - (tipo === 'fuego' ? 2 : 0); // Fuego sube
         this.life = 1.0; this.decay = Math.random() * 0.04 + 0.03;
     }
-    update() { this.x += this.vx; this.y += this.vy; this.vx *= 0.96; this.vy *= 0.96; this.life -= this.decay; }
+    update() { this.x += this.vx; this.y += this.vy; this.vx *= 0.96; this.life -= this.decay; }
     draw() {
         if (this.life <= 0) return;
-        ctx.save(); ctx.shadowBlur = 10 * this.life; ctx.shadowColor = this.color;
-        ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, 3, 3); ctx.restore();
+        ctx.save(); ctx.shadowBlur = 10 * this.life;
+        ctx.shadowColor = (this.tipo === 'fuego') ? `rgba(255, ${Math.floor(this.life*150)}, 0, 1)` : this.color;
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = ctx.shadowColor;
+        ctx.fillRect(this.x, this.y, this.tipo === 'fuego' ? 4 : 3, this.tipo === 'fuego' ? 4 : 3); ctx.restore();
     }
 }
 function crearExplosionParticulas(x, y, color) {
-    for (let i = 0; i < 14; i++) particles.push(new Particle(x + 10, y + 10, color));
+    let t = particulaEquipada ? 'fuego' : 'normal';
+    for (let i = 0; i < 15; i++) particles.push(new Particle(x + 10, y + 10, color, t));
 }
 
-// 💥 SACUDIDA DE PANTALLA
 function sacudirTablero(tipo) {
-    canvas.classList.remove('shake-light', 'shake-heavy');
-    void canvas.offsetWidth; 
+    canvas.classList.remove('shake-light', 'shake-heavy'); void canvas.offsetWidth; 
     if (tipo === 'light') canvas.classList.add('shake-light');
     if (tipo === 'heavy') canvas.classList.add('shake-heavy');
 }
 
+// CONTROLADORES DE MENÚS
 function toggleLeaderboard() {
     iniciarAudio();
-    if (estadoJuego === 'LEADERBOARD') {
-        estadoJuego = 'INICIO';
-    } else {
-        estadoJuego = 'LEADERBOARD';
+    estadoJuego = (estadoJuego === 'LEADERBOARD') ? 'INICIO' : 'LEADERBOARD';
+}
+
+function toggleShop() {
+    iniciarAudio();
+    estadoJuego = (estadoJuego === 'SHOP') ? 'INICIO' : 'SHOP';
+}
+
+function comprarItem(item, coste) {
+    iniciarAudio();
+    if (creditosNeon >= coste && !tiendaInventario[item]) {
+        creditosNeon -= coste;
+        tiendaInventario[item] = true;
+        localStorage.setItem('snakeCredits', creditosNeon);
+        localStorage.setItem('snakeShop_v1', JSON.stringify(tiendaInventario));
+        sacudirTablero('light');
     }
 }
 
+function equiparItem(tipo) {
+    iniciarAudio();
+    if (tipo === 'skin' && tiendaInventario.skinCorona) skinEquipada = !skinEquipada;
+    if (tipo === 'particula' && tiendaInventario.particulaFuego) particulaEquipada = !particulaEquipada;
+}
+
 function setModo(modo) {
-    if (estadoJuego !== 'INICIO' && estadoJuego !== 'GAMEOVER' && estadoJuego !== 'LEADERBOARD') return; 
+    if (estadoJuego !== 'INICIO' && estadoJuego !== 'GAMEOVER' && estadoJuego !== 'LEADERBOARD' && estadoJuego !== 'SHOP') return; 
     modoJuego = modo;
     document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
     if (modo === 'CLASICO') document.getElementById('mode-clasico').classList.add('active');
@@ -288,8 +299,7 @@ function setModo(modo) {
 
 function setTheme(themeName) {
     document.body.classList.remove('theme-cyberpunk', 'theme-matrix', 'theme-synthwave');
-    document.body.classList.add(themeName);
-    actualizarColoresJS();
+    document.body.classList.add(themeName); actualizarColoresJS();
     document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelector(`.theme-btn.${themeName}`).classList.add('active');
 }
@@ -298,34 +308,19 @@ function iniciarAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || 
 
 function sonarComer(tipo = 'normal') {
     iniciarAudio(); if (!audioCtx) return;
-    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-    osc.type = 'square';
-    if (tipo === 'banana') {
-        osc.frequency.setValueAtTime(440, audioCtx.currentTime); 
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.08);
-    } else if (tipo === 'chili') {
-        osc.type = 'sawtooth'; 
-        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.05);
-    } else {
-        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.06);
-    }
-    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.type = 'square';
+    if (tipo === 'banana') { osc.frequency.setValueAtTime(440, audioCtx.currentTime); osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.08); } 
+    else if (tipo === 'chili') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(600, audioCtx.currentTime); osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.05); } 
+    else { osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.06); }
+    gain.gain.setValueAtTime(0.08, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.2);
 }
 
 function sonarGameOver() {
     iniciarAudio(); if (!audioCtx) return;
-    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
-    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(250, audioCtx.currentTime);
-    osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.4);
-    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(250, audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(60, audioCtx.currentTime + 0.4); gain.gain.setValueAtTime(0.12, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.4);
 }
 
 function bucleJuego() { mostrarJuego(); setTimeout(bucleJuego, velocidadActual); }
@@ -337,9 +332,7 @@ function mostrarJuego() {
     ctx.shadowBlur = 0; ctx.globalAlpha = 1;
     ctx.fillStyle = "#05050a"; ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    dibujarManzana();
-    dibujarFrutaEspecial();
-    dibujarSerpiente();
+    dibujarManzana(); dibujarFrutaEspecial(); dibujarSerpiente();
 
     for (let i = particles.length - 1; i >= 0; i--) {
         particles[i].update(); particles[i].draw();
@@ -347,170 +340,83 @@ function mostrarJuego() {
     }
     ctx.globalAlpha = 1;
 
-    // ⏳ GESTIÓN DE TEMPORIZADORES INDEPENDIENTES
     if (estadoJuego === 'JUGANDO') {
-        if (frutaEspecial.active) {
-            frutaEspecial.ticksLeft--;
-            if (frutaEspecial.ticksLeft <= 0) frutaEspecial.active = false;
-        }
-        if (powerupActivo) {
-            powerupTicksLeft--;
-            if (powerupTicksLeft <= 0) powerupActivo = null;
-        }
-        // Reducción del contador del combo activo
-        if (comboMultiplicador > 1) {
-            comboTicksLeft--;
-            if (comboTicksLeft <= 0) comboMultiplicador = 1; // El combo expira
-        }
+        if (frutaEspecial.active) { frutaEspecial.ticksLeft--; if (frutaEspecial.ticksLeft <= 0) frutaEspecial.active = false; }
+        if (powerupActivo) { powerupTicksLeft--; if (powerupTicksLeft <= 0) powerupActivo = null; }
+        if (comboMultiplicador > 1) { comboTicksLeft--; if (comboTicksLeft <= 0) comboMultiplicador = 1; }
     }
 
-    if (estadoJuego === 'LEADERBOARD') {
-        document.getElementById('recordsBtn').classList.add('active');
-    } else {
-        document.getElementById('recordsBtn').classList.remove('active');
-    }
-
-    // Dibujar letrero flotante de Combo en el canvas
     if (estadoJuego === 'JUGANDO' && comboMultiplicador > 1) {
-        ctx.save(); ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.ui;
-        ctx.fillStyle = colorPaleta.ui; ctx.font = "italic bold 15px 'Segoe UI', Arial"; ctx.textAlign = "left";
+        ctx.save(); ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.ui; ctx.fillStyle = colorPaleta.ui; ctx.font = "italic bold 15px 'Segoe UI', Arial"; ctx.textAlign = "left";
         ctx.fillText(`COMBO X${comboMultiplicador}! 🔥`, 15, 30); ctx.restore();
     }
 
+    // GESTOR DE RENDERS DE MENÚS
     if (estadoJuego === 'INICIO') { dibujarPantallaInicio(); return; }
     if (estadoJuego === 'PAUSA') { dibujarPantallaPausa(); return; }
     if (estadoJuego === 'GAMEOVER') { dibujarPantallaGameOver(); return; }
     if (estadoJuego === 'LEADERBOARD') { dibujarPantallaLeaderboard(); return; } 
+    if (estadoJuego === 'SHOP') { dibujarPantallaTienda(); return; } // Renderizar tienda
 
     actualDx = dx; actualDy = dy;
     let newX = snake[0].x + dx; let newY = snake[0].y + dy;
 
     let chocoPared = (newX < 0 || newX >= 400 || newY < 0 || newY >= 400);
     if (chocoPared) {
-        if (modoJuego === 'CLASICO') {
-            sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; 
-            evaluarLogroInmortal(); verificarYGuardarRecord(); return;
-        } else {
-            // Reubicación Pacman e incrementador del contador de saltos
-            if (newX < 0) newX = 380; if (newX >= 400) newX = 0;
-            if (newY < 0) newY = 380; if (newY >= 400) newY = 0;
-            wrapAroundContador++;
-            if (wrapAroundContador >= 10 && !logros.escapista) desbloquearLogro('escapista');
-        }
+        if (modoJuego === 'CLASICO') { sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; evaluarLogroInmortal(); verificarYGuardarRecord(); return; } 
+        else { newX = newX < 0 ? 380 : (newX >= 400 ? 0 : newX); newY = newY < 0 ? 380 : (newY >= 400 ? 0 : newY); wrapAroundContador++; if (wrapAroundContador >= 10 && !logros.escapista) desbloquearLogro('escapista'); }
     }
 
-    if (chocoConsigoMisma(newX, newY)) {
-        sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; 
-        evaluarLogroInmortal(); verificarYGuardarRecord(); return;
-    }
+    if (chocoConsigoMisma(newX, newY)) { sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; evaluarLogroInmortal(); verificarYGuardarRecord(); return; }
 
     snake.unshift({ x: newX, y: newY });
 
-    // 🍏 DETECCIÓN: MANZANA NORMAL
     if (newX === apple.x && newY === apple.y) {
-        // Ejecución del multiplicador del Combo
         ejecutarCadenaCombo();
-        
         let basePuntos = (powerupActivo === 'chili') ? 30 : 10; 
-        
-        // Desbloqueo automático del logro de velocidad si comes bajo los efectos de la guindilla turbo
         if (powerupActivo === 'chili' && !logros.velocidad) desbloquearLogro('velocidad');
 
         puntuacion += (basePuntos * comboMultiplicador);
         scoreText.innerText = puntuacion;
         sonarComer('normal'); sacudirTablero('light');
-        
         crearExplosionParticulas(apple.x, apple.y, colorPaleta.apple);
 
         manzanasNormalesContador++;
         if (manzanasNormalesContador % 5 === 0) generarFrutaEspecial();
-
         ajustarVelocidadDinamica(); generarNuevaManzana();
     } 
-    // 🍌 DETECCIÓN: FRUTA ESPECIAL
     else if (frutaEspecial.active && newX === frutaEspecial.x && newY === frutaEspecial.y) {
-        frutaEspecial.active = false; sacudirTablero('light');
-        ejecutarCadenaCombo();
-        
+        frutaEspecial.active = false; sacudirTablero('light'); ejecutarCadenaCombo();
         let basePuntosSpec = (frutaEspecial.type === 'banana') ? 20 : 30;
-        
-        if (frutaEspecial.type === 'banana') {
-            sonarComer('banana'); powerupActivo = 'banana';
-            crearExplosionParticulas(frutaEspecial.x, frutaEspecial.y, "#00d2ff");
-            powerupTicksLeft = Math.floor(5000 / velocidadActual); 
-        } else {
-            sonarComer('chili'); powerupActivo = 'chili';
-            if (!logros.velocidad) desbloquearLogro('velocidad');
-            crearExplosionParticulas(frutaEspecial.x, frutaEspecial.y, "#ff3300");
-            powerupTicksLeft = Math.floor(4000 / velocidadActual); 
-        }
-        
-        puntuacion += (basePuntosSpec * comboMultiplicador);
-        scoreText.innerText = puntuacion;
-        ajustarVelocidadDinamica();
+        if (frutaEspecial.type === 'banana') { puntuacion += (basePuntosSpec * comboMultiplicador); sonarComer('banana'); powerupActivo = 'banana'; crearExplosionParticulas(frutaEspecial.x, frutaEspecial.y, "#00d2ff"); powerupTicksLeft = Math.floor(5000 / velocidadActual); } 
+        else { puntuacion += (basePuntosSpec * comboMultiplicador); sonarComer('chili'); powerupActivo = 'chili'; if (!logros.velocidad) desbloquearLogro('velocidad'); crearExplosionParticulas(frutaEspecial.x, frutaEspecial.y, "#ff3300"); powerupTicksLeft = Math.floor(4000 / velocidadActual); }
+        scoreText.innerText = puntuacion; ajustarVelocidadDinamica();
     } else {
         snake.pop();
     }
 }
 
-// 🔥 CONTROLADOR MECÁNICO DE COMBOS
 function ejecutarCadenaCombo() {
-    if (comboTicksLeft > 0) {
-        comboMultiplicador++; // Encadena combo
-    } else {
-        comboMultiplicador = 1; // Primer golpe
-    }
-    // Da 3 segundos exactos para encontrar la siguiente fruta
-    comboTicksMax = Math.floor(3000 / velocidadActual);
-    comboTicksLeft = comboTicksMax;
+    if (comboTicksLeft > 0) comboMultiplicador++; else comboMultiplicador = 1;
+    comboTicksMax = Math.floor(3000 / velocidadActual); comboTicksLeft = comboTicksMax;
 }
 
-// 🎖️ GESTORES DE LOGROS
-function desbloquearLogro(id) {
-    logros[id] = true;
-    localStorage.setItem('snakeLogros_v1', JSON.stringify(logros));
-    sacudirTablero('light'); // Mini feedback táctil de recompensa
-}
-function evaluarLogroInmortal() {
-    if (modoJuego === 'CLASICO' && puntuacion >= 300 && !logros.inmortal) {
-        desbloquearLogro('inmortal');
-    }
-}
+function desbloquearLogro(id) { logros[id] = true; localStorage.setItem('snakeLogros_v1', JSON.stringify(logros)); sacudirTablero('light'); }
+function evaluarLogroInmortal() { if (modoJuego === 'CLASICO' && puntuacion >= 300 && !logros.inmortal) desbloquearLogro('inmortal'); }
 
-// PINTOR INTEGRADO DE MEDALLAS EN LOS MENÚS
 function dibujarMedallasUI(yBase) {
-    ctx.save(); ctx.textAlign = "center"; ctx.font = "bold 12px 'Segoe UI', Arial";
-    ctx.fillStyle = "#ffaa00"; ctx.fillText("🎖️ MEDALLAS LOGRADAS 🎖️", canvas.width / 2, yBase);
-
-    // Medalla 1: Velocidad (Chili Turbo)
-    ctx.font = "18px Arial"; ctx.fillStyle = logros.velocidad ? "#ff3300" : "#222";
-    ctx.fillText("⚡", canvas.width / 2 - 65, yBase + 24);
-    ctx.font = "bold 9px Arial"; ctx.fillStyle = logros.velocidad ? "#fff" : "#444";
-    ctx.fillText("TURBO", canvas.width / 2 - 65, yBase + 36);
-
-    // Medalla 2: Inmortal (300 Pts clásico)
-    ctx.font = "18px Arial"; ctx.fillStyle = logros.inmortal ? "#00fff2" : "#222";
-    ctx.fillText("🛡️", canvas.width / 2, yBase + 24);
-    ctx.font = "bold 9px Arial"; ctx.fillStyle = logros.inmortal ? "#fff" : "#444";
-    ctx.fillText("INMORTAL", canvas.width / 2, yBase + 36);
-
-    // Medalla 3: Escapista (10 Saltos Pacman)
-    ctx.font = "18px Arial"; ctx.fillStyle = logros.escapista ? "#ffaa00" : "#222";
-    ctx.fillText("🌀", canvas.width / 2 + 65, yBase + 24);
-    ctx.font = "bold 9px Arial"; ctx.fillStyle = logros.escapista ? "#fff" : "#444";
-    ctx.fillText("ESCAPISTA", canvas.width / 2 + 65, yBase + 36);
-    ctx.restore();
+    ctx.save(); ctx.textAlign = "center"; ctx.font = "bold 12px 'Segoe UI', Arial"; ctx.fillStyle = "#ffaa00"; ctx.fillText("🎖️ MEDALLAS LOGRADAS 🎖️", canvas.width / 2, yBase);
+    ctx.font = "18px Arial"; ctx.fillStyle = logros.velocidad ? "#ff3300" : "#222"; ctx.fillText("⚡", canvas.width / 2 - 65, yBase + 24);
+    ctx.font = "bold 9px Arial"; ctx.fillStyle = logros.velocidad ? "#fff" : "#444"; ctx.fillText("TURBO", canvas.width / 2 - 65, yBase + 36);
+    ctx.font = "18px Arial"; ctx.fillStyle = logros.inmortal ? "#00fff2" : "#222"; ctx.fillText("🛡️", canvas.width / 2, yBase + 24);
+    ctx.font = "bold 9px Arial"; ctx.fillStyle = logros.inmortal ? "#fff" : "#444"; ctx.fillText("INMORTAL", canvas.width / 2, yBase + 36);
+    ctx.font = "18px Arial"; ctx.fillStyle = logros.escapista ? "#ffaa00" : "#222"; ctx.fillText("🌀", canvas.width / 2 + 65, yBase + 24);
+    ctx.font = "bold 9px Arial"; ctx.fillStyle = logros.escapista ? "#fff" : "#444"; ctx.fillText("ESCAPISTA", canvas.width / 2 + 65, yBase + 36); ctx.restore();
 }
 
 function ajustarVelocidadDinamica() {
     let baseVel = Math.max(65, VELOCIDAD_INICIAL - (Math.floor(puntuacion / 50) * 8));
-    if (powerupActivo === 'banana') {
-        velocidadActual = baseVel + 35; 
-    } else if (powerupActivo === 'chili') {
-        velocidadActual = 55; 
-    } else {
-        velocidadActual = baseVel;
-    }
+    velocidadActual = powerupActivo === 'banana' ? baseVel + 35 : (powerupActivo === 'chili' ? 55 : baseVel);
 }
 
 function generarFrutaEspecial() {
@@ -518,64 +424,87 @@ function generarFrutaEspecial() {
     while (ocupado) {
         frutaEspecial.x = Math.floor(Math.random() * 20) * 20; frutaEspecial.y = Math.floor(Math.random() * 20) * 20;
         ocupado = (frutaEspecial.x === apple.x && frutaEspecial.y === apple.y);
-        for (let i = 0; i < snake.length; i++) {
-            if (frutaEspecial.x === snake[i].x && frutaEspecial.y === snake[i].y) ocupado = true;
-        }
+        for (let i = 0; i < snake.length; i++) { if (frutaEspecial.x === snake[i].x && frutaEspecial.y === snake[i].y) ocupado = true; }
     }
-    frutaEspecial.type = Math.random() > 0.5 ? 'banana' : 'chili';
-    frutaEspecial.active = true;
-    frutaEspecial.ticksMax = Math.floor(6000 / velocidadActual); 
-    frutaEspecial.ticksLeft = frutaEspecial.ticksMax;
+    frutaEspecial.type = Math.random() > 0.5 ? 'banana' : 'chili'; frutaEspecial.active = true;
+    frutaEspecial.ticksMax = Math.floor(6000 / velocidadActual); frutaEspecial.ticksLeft = frutaEspecial.ticksMax;
 }
 
 function dibujarManzana() {
-    ctx.shadowBlur = (powerupActivo === 'chili') ? 25 : 15;
-    ctx.shadowColor = colorPaleta.apple; ctx.fillStyle = colorPaleta.apple;
+    ctx.shadowBlur = (powerupActivo === 'chili') ? 25 : 15; ctx.shadowColor = colorPaleta.apple; ctx.fillStyle = colorPaleta.apple;
     ctx.beginPath(); ctx.arc(apple.x + 10, apple.y + 10, 9, 0, 2 * Math.PI); ctx.fill();
 }
 
 function dibujarFrutaEspecial() {
     if (!frutaEspecial.active) return;
-    ctx.save();
-    let colorFruta = (frutaEspecial.type === 'banana') ? "#00d2ff" : "#ff3300";
+    ctx.save(); let colorFruta = (frutaEspecial.type === 'banana') ? "#00d2ff" : "#ff3300";
     ctx.shadowBlur = 15; ctx.shadowColor = colorFruta; ctx.fillStyle = colorFruta;
     ctx.beginPath(); ctx.arc(frutaEspecial.x + 10, frutaEspecial.y + 10, 8, 0, 2 * Math.PI); ctx.fill();
-
-    ctx.shadowBlur = 0; ctx.strokeStyle = colorFruta; ctx.lineWidth = 2;
-    ctx.beginPath();
+    ctx.shadowBlur = 0; ctx.strokeStyle = colorFruta; ctx.lineWidth = 2; ctx.beginPath();
     let porcentajeTiempo = frutaEspecial.ticksLeft / frutaEspecial.ticksMax;
-    ctx.arc(frutaEspecial.x + 10, frutaEspecial.y + 10, 13, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * porcentajeTiempo));
-    ctx.stroke(); ctx.restore();
+    ctx.arc(frutaEspecial.x + 10, frutaEspecial.y + 10, 13, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * porcentajeTiempo)); ctx.stroke(); ctx.restore();
 }
 
 function dibujarSerpiente() {
     ctx.shadowBlur = 15;
     for (let i = 0; i < snake.length; i++) {
         if (i === 0) {
-            ctx.fillStyle = powerupActivo ? ((powerupActivo === 'banana') ? "#00d2ff" : "#ff3300") : colorPaleta.head;
-            ctx.shadowColor = ctx.fillStyle;
+            // Recompensa visual tienda: Corona dorada o color de poder activo
+            if (skinEquipada) { ctx.fillStyle = "#ffe600"; ctx.shadowColor = "#ffe600"; } 
+            else { ctx.fillStyle = powerupActivo ? ((powerupActivo === 'banana') ? "#00d2ff" : "#ff3300") : colorPaleta.head; ctx.shadowColor = ctx.fillStyle; }
         } else {
             let opacidad = 1 - (i / snake.length) * 0.65;
-            ctx.fillStyle = colorPaleta.body.replace(')', `, ${opacidad})`);
-            ctx.shadowColor = colorPaleta.body;
+            ctx.fillStyle = colorPaleta.body.replace(')', `, ${opacidad})`); ctx.shadowColor = colorPaleta.body;
         }
         ctx.fillRect(snake[i].x + 1, snake[i].y + 1, 18, 18);
+        
+        // Pinta una mini corona pixelada si está equipada
+        if (i === 0 && skinEquipada) {
+            ctx.fillStyle = "#ffaa00"; ctx.fillRect(snake[0].x + 4, snake[0].y - 3, 3, 4); ctx.fillRect(snake[0].x + 12, snake[0].y - 3, 3, 4); ctx.fillRect(snake[0].x + 8, snake[0].y - 1, 4, 3);
+        }
     }
 }
 
 function dibujarPantallaInicio() {
-    ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.ui;
-    ctx.fillStyle = "rgba(10, 10, 20, 0.85)"; ctx.fillRect(30, 140, 340, 110);
+    ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.ui; ctx.fillStyle = "rgba(10, 10, 20, 0.85)"; ctx.fillRect(30, 130, 340, 130);
     ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.ui; ctx.font = "bold 15px 'Segoe UI', Arial"; ctx.textAlign = "center";
-    ctx.fillText("PULSA ESPACIO O EL DPAD", canvas.width / 2, 190);
-    ctx.fillText("PARA EMPEZAR EL JUEGO 🎮", canvas.width / 2, 220);
+    ctx.fillText("PULSA ESPACIO O EL DPAD", canvas.width / 2, 175); ctx.fillText("PARA EMPEZAR EL JUEGO 🎮", canvas.width / 2, 205);
+    ctx.fillStyle = "#e200ff"; ctx.font = "bold 12px 'Segoe UI', Arial"; ctx.fillText(`CRÉDITOS NEÓN: ${creditosNeon} 💎`, canvas.width / 2, 240);
 }
 
 function dibujarPantallaPausa() {
-    ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.apple;
-    ctx.fillStyle = "rgba(10, 10, 20, 0.85)"; ctx.fillRect(90, 165, 220, 70);
+    ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.apple; ctx.fillStyle = "rgba(10, 10, 20, 0.85)"; ctx.fillRect(90, 165, 220, 70);
     ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.apple; ctx.font = "bold 24px 'Segoe UI', Arial"; ctx.textAlign = "center";
     ctx.fillText("JUEGO EN PAUSA", canvas.width / 2, 208);
+}
+
+// 🏪 SCREEN EXCLUSIVA DE LA TIENDA DE LOGROS NEÓN
+function dibujarPantallaTienda() {
+    ctx.shadowBlur = 15; ctx.shadowColor = "#e200ff";
+    ctx.fillStyle = "rgba(15, 10, 25, 0.96)"; ctx.strokeStyle = "#e200ff"; ctx.lineWidth = 3;
+    ctx.fillRect(30, 20, 340, 360); ctx.strokeRect(30, 20, 340, 360);
+
+    ctx.shadowBlur = 0; ctx.fillStyle = "#e200ff"; ctx.font = "bold 22px 'Segoe UI', Arial"; ctx.textAlign = "center";
+    ctx.fillText("🏪 NEON CYBER SHOP 🏪", canvas.width / 2, 60);
+    ctx.fillStyle = "#fff"; ctx.font = "bold 13px 'Segoe UI', Arial";
+    ctx.fillText(`TUS CRÉDITOS: ${creditosNeon} 💎`, canvas.width / 2, 90);
+
+    // Item 1: Skin de Corona
+    ctx.textAlign = "left"; ctx.font = "bold 13px Arial";
+    ctx.fillStyle = tiendaInventario.skinCorona ? "#00fff2" : "#fff";
+    ctx.fillText(tiendaInventario.skinCorona ? `👑 CORONA REY [COMPRADO]` : "👑 CORONA REY (Coste: 30 💎)", 45, 140);
+    ctx.font = "11px Arial"; ctx.fillStyle = "#888"; ctx.fillText(tiendaInventario.skinCorona ? (skinEquipada ? "-> EQUIPADO (Pulsa 1 para quitar)" : "-> GUARDADO (Pulsa 1 para equipar)") : "Añade una corona dorada a la cabeza.", 45, 160);
+
+    // Item 2: Partícula de Fuego
+    ctx.font = "bold 13px Arial"; ctx.fillStyle = tiendaInventario.particulaFuego ? "#00fff2" : "#fff";
+    ctx.fillText(tiendaInventario.particulaFuego ? `🔥 ESTELA FUEGO [COMPRADO]` : "🔥 ESTELA FUEGO (Coste: 50 💎)", 45, 210);
+    ctx.font = "11px Arial"; ctx.fillStyle = "#888"; ctx.fillText(tiendaInventario.particulaFuego ? (particulaEquipada ? "-> EQUIPADO (Pulsa 2 para quitar)" : "-> GUARDADO (Pulsa 2 para equipar)") : "Las explosiones lanzan chispas de fuego.", 45, 230);
+
+    // Instrucciones móviles/PC
+    ctx.textAlign = "center"; ctx.font = "italic 11px 'Segoe UI', Arial"; ctx.fillStyle = "#666";
+    ctx.fillText("En PC compra/equipa pulsando teclado 1 o 2", canvas.width / 2, 310);
+    ctx.fillText("En móvil toca la pantalla para interactuar", canvas.width / 2, 330);
+    ctx.fillStyle = "#fff"; ctx.font = "bold 12px Arial"; ctx.fillText("Pulsa el botón TIENDA o Espacio para salir", canvas.width / 2, 360);
 }
 
 function dibujarPantallaLeaderboard() {
@@ -583,90 +512,119 @@ function dibujarPantallaLeaderboard() {
     ctx.fillStyle = "rgba(15, 10, 25, 0.95)"; ctx.strokeStyle = "#ffaa00"; ctx.lineWidth = 3;
     ctx.fillRect(30, 20, 340, 360); ctx.strokeRect(30, 20, 340, 360);
 
-    ctx.shadowBlur = 0; ctx.fillStyle = "#ffaa00"; ctx.font = "bold 24px 'Segoe UI', Arial"; ctx.textAlign = "center";
-    ctx.fillText("🏆 HALL OF FAME 🏆", canvas.width / 2, 60);
+    ctx.shadowBlur = 0; ctx.fillStyle = "#ffaa00"; ctx.font = "bold 22px 'Segoe UI', Arial"; ctx.textAlign = "center";
+    ctx.fillText(firebaseActivo ? "🌐 TOP 5 MUNDIAL (NUBE) 🌐" : "🏆 HALL OF FAME (LOCAL) 🏆", canvas.width / 2, 55);
 
     ctx.font = "bold 15px 'Courier New', Courier, monospace"; ctx.textAlign = "left";
     for (let i = 0; i < 5; i++) {
         let jugador = tablaPosiciones[i] || { name: "----------", score: 0 };
-        let yPos = 110 + (i * 32); ctx.fillStyle = "#fff";
+        let yPos = 100 + (i * 30); ctx.fillStyle = "#fff";
         let puesto = i + 1;
         let textoFila = `${puesto}. ${jugador.name.padEnd(11, '.')} ${String(jugador.score).padStart(4, '0')} PTS`;
         ctx.fillText(textoFila, canvas.width / 2 - 140, yPos);
     }
-    // Renderizado de las medallas integradas
-    dibujarMedallasUI(280);
-
+    dibujarMedallasUI(275);
     ctx.textAlign = "center"; ctx.font = "italic 13px 'Segoe UI', Arial"; ctx.fillStyle = "#777";
-    ctx.fillText("Pulsa el botón de nuevo o Espacio para volver", canvas.width / 2, 362);
+    ctx.fillText("Pulsa el botón de nuevo o Espacio para volver", canvas.width / 2, 365);
 }
 
 function dibujarPantallaGameOver() {
-    ctx.shadowBlur = 15; ctx.shadowColor = colorPaleta.apple;
-    ctx.fillStyle = "rgba(15, 10, 25, 0.95)"; ctx.strokeStyle = colorPaleta.apple; ctx.lineWidth = 3;
+    ctx.shadowBlur = 15; ctx.shadowColor = colorPaleta.apple; ctx.fillStyle = "rgba(15, 10, 25, 0.95)"; ctx.strokeStyle = colorPaleta.apple; ctx.lineWidth = 3;
     ctx.fillRect(30, 20, 340, 360); ctx.strokeRect(30, 20, 340, 360);
     
     ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.apple; ctx.font = "bold 24px 'Segoe UI', Arial"; ctx.textAlign = "center";
-    ctx.fillText("¡GAME OVER! 😵", canvas.width / 2, 52);
+    ctx.fillText("¡GAME OVER! 😵", canvas.width / 2, 50);
     ctx.fillStyle = "#fff"; ctx.font = "14px 'Segoe UI', Arial";
-    ctx.fillText("Tu puntuación: " + puntuacion, canvas.width / 2, 78);
+    
+    // Cálculo de monedas ganadas en la sesión
+    let monedasGanadas = Math.floor(puntuacion / 10);
+    ctx.fillText(`Puntuación: ${puntuacion} | ¡Ganaste +${monedasGanadas} 💎!`, canvas.width / 2, 75);
     
     ctx.fillStyle = "#ffaa00"; ctx.font = "bold 15px 'Segoe UI', Arial";
-    ctx.fillText("🏆 TOP 5 MEJORES JUGADORES 🏆", canvas.width / 2, 115);
+    ctx.fillText("🏆 TOP 5 MEJORES JUGADORES 🏆", canvas.width / 2, 110);
     
     ctx.font = "bold 15px 'Courier New', Courier, monospace"; ctx.textAlign = "left";
     for (let i = 0; i < 5; i++) {
         let jugador = tablaPosiciones[i] || { name: "----------", score: 0 };
-        let yPos = 145 + (i * 26);
+        let yPos = 140 + (i * 26);
         ctx.fillStyle = (jugador.score === puntuacion && jugador.score > 0) ? colorPaleta.ui : "#fff";
         let puesto = i + 1;
         let textoFila = `${puesto}. ${jugador.name.padEnd(11, '.')} ${String(jugador.score).padStart(4, '0')} PTS`;
         ctx.fillText(textoFila, canvas.width / 2 - 140, yPos); 
     }
-    // Renderizado de las medallas integradas
-    dibujarMedallasUI(290);
-
+    dibujarMedallasUI(285);
     ctx.textAlign = "center"; ctx.font = "italic 12px 'Segoe UI', Arial"; ctx.fillStyle = "#777";
     ctx.fillText("Pulsa Espacio o el D-pad para reiniciar", canvas.width / 2, 365);
 }
 
 function verificarYGuardarRecord() {
+    // Entrega de créditos ganados a la hucha permanente
+    let extraCredits = Math.floor(puntuacion / 10);
+    if (extraCredits > 0) { creditosNeon += extraCredits; localStorage.setItem('snakeCredits', creditosNeon); }
+
     if (puntuacion > 0 && (tablaPosiciones.length < 5 || puntuacion >= tablaPosiciones[tablaPosiciones.length - 1].score)) {
         setTimeout(() => {
             let iniciales = prompt("¡ENTRASTE AL TOP 5! 👑\nIntroduce tu nombre (máx. 10 letras):");
             if (!iniciales) iniciales = "PLAYER";
             iniciales = iniciales.substring(0, 10).toUpperCase(); 
             
-            tablaPosiciones.push({ name: iniciales, score: puntuacion });
-            tablaPosiciones.sort((a, b) => b.score - a.score);
-            tablaPosiciones = tablaPosiciones.slice(0, 5);
-            localStorage.setItem('snakeLeaderboard_v3', JSON.stringify(tablaPosiciones)); 
-            mostrarJuego();
+            if (firebaseActivo) {
+                // Subida en vivo y directo a la base de datos en la nube
+                firebase.database().ref('leaderboard').push({ name: iniciales, score: puntuacion });
+            } else {
+                // Caída de seguridad local tradicional
+                tablaPosiciones.push({ name: iniciales, score: puntuacion });
+                tablaPosiciones.sort((a, b) => b.score - a.score);
+                tablaPosiciones = tablaPosiciones.slice(0, 5);
+                localStorage.setItem('snakeLeaderboard_v3', JSON.stringify(tablaPosiciones));
+                mostrarJuego();
+            }
         }, 80);
     }
+}
+
+// 🌐 CONEXIÓN ACTIVA A LA NUBE REALTIME DATABASE DE GOOGLE FIREBASE
+function conectarYEscucharNube() {
+    firebase.database().ref('leaderboard').orderByChild('score').limitToLast(5).on('value', (snapshot) => {
+        let lista = [];
+        snapshot.forEach((child) => {
+            lista.push(child.val());
+        });
+        // Firebase ordena de menor a mayor, le damos la vuelta para el Top 5 arcade
+        lista.sort((a, b) => b.score - a.score);
+        tablaPosiciones = lista;
+        if (estadoJuego === 'LEADERBOARD' || estadoJuego === 'GAMEOVER') mostrarJuego();
+    });
 }
 
 function cambiarDireccion(elemento) {
     const tecla = typeof elemento === 'string' ? elemento : elemento.key;
 
+    // Control de atajos de la tienda en PC
+    if (estadoJuego === 'SHOP') {
+        if (tecla === '1') { if(!tiendaInventario.skinCorona) comprarItem('skinCorona', 30); else equiparItem('skin'); mostrarJuego(); return; }
+        if (tecla === '2') { if(!tiendaInventario.particulaFuego) comprarItem('particulaFuego', 50); else equiparItem('particula'); mostrarJuego(); return; }
+        if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) { estadoJuego = 'INICIO'; return; }
+        return;
+    }
+
     if (estadoJuego === 'LEADERBOARD') {
-        if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) {
-            estadoJuego = 'INICIO';
-        }
+        if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) { estadoJuego = 'INICIO'; }
         return;
     }
     if (estadoJuego === 'GAMEOVER') {
-        if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) {
-            reiniciarJuego(); estadoJuego = 'JUGANDO';
-        }
+        if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) { reiniciarJuego(); estadoJuego = 'JUGANDO'; }
         return;
     }
     if (estadoJuego === 'INICIO') {
-        if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) {
-            iniciarAudio(); estadoJuego = 'JUGANDO';
+        if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) { 
+            iniciarAudio(); estadoJuego = 'JUGANDO'; 
+            // 🎵 Arranca la música procedural al pulsar Start
+            clearTimeout(synthMusicToken); tocarPasoMusica(); 
         }
         return;
     }
+    
     if (tecla === 'p' || tecla === 'P' || tecla === 'Escape') { togglePausa(); return; }
     if (estadoJuego === 'PAUSA') return;
 
@@ -676,44 +634,44 @@ function cambiarDireccion(elemento) {
     if (tecla === 'ArrowDown' && actualDy === 0)  { dx = 0;   dy = 20; }
 }
 
+// Interacción de clics táctiles/ratón dentro de la pantalla de la Tienda
+canvas.addEventListener('click', (e) => {
+    if (estadoJuego !== 'SHOP') return;
+    const rect = canvas.getBoundingClientRect();
+    const scaleY = 400 / rect.height;
+    const clickY = (e.clientY - rect.top) * scaleY;
+    
+    if (clickY >= 120 && clickY <= 170) { if(!tiendaInventario.skinCorona) comprarItem('skinCorona', 30); else equiparItem('skin'); }
+    if (clickY >= 190 && clickY <= 240) { if(!tiendaInventario.particulaFuego) comprarItem('particulaFuego', 50); else equiparItem('particula'); }
+    mostrarJuego();
+});
+
 function togglePausa() {
-    if (estadoJuego === 'INICIO' || estadoJuego === 'GAMEOVER' || estadoJuego === 'LEADERBOARD') return; 
+    if (estadoJuego === 'INICIO' || estadoJuego === 'GAMEOVER' || estadoJuego === 'LEADERBOARD' || estadoJuego === 'SHOP') return; 
     iniciarAudio();
-    if (estadoJuego === 'JUGANDO') {
-        estadoJuego = 'PAUSA'; document.getElementById('pauseBtn').innerText = "▶️"; 
-    } else if (estadoJuego === 'PAUSA') {
-        estadoJuego = 'JUGANDO'; document.getElementById('pauseBtn').innerText = "⏸️"; 
-    }
+    if (estadoJuego === 'JUGANDO') { estadoJuego = 'PAUSA'; document.getElementById('pauseBtn').innerText = "▶️"; } 
+    else if (estadoJuego === 'PAUSA') { estadoJuego = 'JUGANDO'; document.getElementById('pauseBtn').innerText = "⏸️"; clearTimeout(synthMusicToken); tocarPasoMusica(); }
 }
 
 function chocoConsigoMisma(x, y) {
-    for (let i = 1; i < snake.length; i++) {
-        if (x === snake[i].x && y === snake[i].y) return true;
-    }
+    for (let i = 1; i < snake.length; i++) { if (x === snake[i].x && y === snake[i].y) return true; }
     return false;
 }
 
 function generarNuevaManzana() {
     let encimaDeLaSerpiente = true;
     while (encimaDeLaSerpiente) {
-        apple.x = Math.floor(Math.random() * 20) * 20; apple.y = Math.floor(Math.random() * 20) * 20;
-        encimaDeLaSerpiente = false;
+        apple.x = Math.floor(Math.random() * 20) * 20; apple.y = Math.floor(Math.random() * 20) * 20; encimaDeLaSerpiente = false;
         if (frutaEspecial.active && apple.x === frutaEspecial.x && apple.y === frutaEspecial.y) encimaDeLaSerpiente = true;
-        for (let i = 0; i < snake.length; i++) {
-            if (apple.x === snake[i].x && apple.y === snake[i].y) { encimaDeLaSerpiente = true; break; }
-        }
+        for (let i = 0; i < snake.length; i++) { if (apple.x === snake[i].x && apple.y === snake[i].y) { encimaDeLaSerpiente = true; break; } }
     }
 }
 
 function reiniciarJuego() {
-    puntuacion = 0; manzanasNormalesContador = 0; wrapAroundContador = 0; comboMultiplicador = 1;
-    velocidadActual = VELOCIDAD_INICIAL;
-    powerupActivo = null; frutaEspecial.active = false;
-    scoreText.innerText = puntuacion;
-    document.getElementById('pauseBtn').innerText = "⏸️";
-    snake = [{ x: 160, y: 160 }, { x: 140, y: 160 }, { x: 120, y: 160 }];
-    dx = 20; dy = 0; particles = [];
-    generarNuevaManzana();
+    puntuacion = 0; manzanasNormalesContador = 0; wrapAroundContador = 0; comboMultiplicador = 1; velocidadActual = VELOCIDAD_INICIAL;
+    powerupActivo = null; frutaEspecial.active = false; scoreText.innerText = puntuacion; document.getElementById('pauseBtn').innerText = "⏸️";
+    snake = [{ x: 160, y: 160 }, { x: 140, y: 160 }, { x: 120, y: 160 }]; dx = 20; dy = 0; particles = [];
+    generarNuevaManzana(); clearTimeout(synthMusicToken); tocarPasoMusica();
 }
     </script>
 </body>
