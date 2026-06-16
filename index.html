@@ -156,12 +156,8 @@ if (firebaseConfig.apiKey !== "SINDATOS") {
     conectarYEscucharNube();
 }
 
-let snake = [{ x: 160, y: 160 }, { x: 140, y: 160 }, { x: 120, y: 160 }];
-
-// 🍎 FRUTAS NORMALES E INSTANTÁNEAS (Eliminada lentitud de escala)
-let apple = { x: 300, y: 200 };
-let frutaEspecial = { x: -100, y: -100, type: null, active: false, ticksMax: 0, ticksLeft: 0 };
-
+let snake = [{ x: 160, y: 280 }, { x: 140, y: 280 }, { x: 120, y: 280 }];
+let apple = { x: 260, y: 280 };
 let dx = 20; let dy = 0; let actualDx = 20; let actualDy = 0;
 let puntuacion = 0; let estadoJuego = 'INICIO'; let audioCtx = null;
 
@@ -170,6 +166,8 @@ let velocidadActual = VELOCIDAD_INICIAL;
 let modoJuego = 'CLASICO';
 
 let ultimoGameOverTime = 0;
+let ultimoInputTime = Date.now(); 
+
 let murosNivel = [];
 
 // 🏪 TIENDA DE COSMÉTICOS
@@ -200,7 +198,7 @@ class FloatingText {
     }
 }
 
-// ✨ ENGINE DE PARTÍCULAS AMBIENTALES DE FÓSFORO RECTO
+// ✨ ENGINE DE PARTÍCULAS AMBIENTALES
 let ambientDust = [];
 function inicializarPolvoAmbiental() {
     ambientDust = [];
@@ -218,7 +216,7 @@ function actualizarYDibujarPolvo() {
     ctx.save(); ctx.shadowBlur = 0; ctx.globalAlpha = 0.15; 
     ctx.fillStyle = colorPaleta.ui || "#fff";
     for (let dot of ambientDust) {
-        if (estadoJuego === 'JUGANDO') { dot.x += dot.vx; dot.y += dot.vy; }
+        if (estadoJuego === 'JUGANDO' || estadoJuego === 'DEMO') { dot.x += dot.vx; dot.y += dot.vy; }
         if (dot.x < 0) dot.x = canvas.width; if (dot.x > canvas.width) dot.x = 0;
         if (dot.y < 0) dot.y = canvas.height; if (dot.y > canvas.height) dot.y = 0;
         ctx.fillRect(dot.x, dot.y, dot.size, dot.size);
@@ -232,14 +230,14 @@ let synthNoteIndex = 0;
 const cyberpunkBassNotes = [110.00, 110.00, 130.81, 97.99, 110.00, 110.00, 146.83, 123.47]; 
 
 function tocarPasoMusica() {
-    if (estadoJuego !== 'JUGANDO') return;
+    if (estadoJuego !== 'JUGANDO' && estadoJuego !== 'DEMO') return;
     iniciarAudio(); if (!audioCtx) return;
 
     const body = document.body;
     let targetOpacity = (comboMultiplicador > 1) ? 0.35 : 0.22; 
     body.style.setProperty('--bg-radial', `radial-gradient(circle, rgba(26,26,46,${targetOpacity}) 0%, #0f0f1a 100%)`);
     setTimeout(() => {
-        if (estadoJuego === 'JUGANDO')
+        if (estadoJuego === 'JUGANDO' || estadoJuego === 'DEMO')
             body.style.setProperty('--bg-radial', `radial-gradient(circle, rgba(26,26,46,0.15) 0%, #0f0f1a 100%)`);
     }, 80);
 
@@ -264,6 +262,7 @@ function tocarPasoMusica() {
 }
 
 let manzanasNormalesContador = 0;
+let frutaEspecial = { x: -100, y: -100, type: null, active: false, ticksMax: 0, ticksLeft: 0 };
 let powerupActivo = null; let powerupTicksLeft = 0;
 let comboMultiplicador = 1; let comboTicksMax = 0; let comboTicksLeft = 0;
 let wrapAroundContador = 0;
@@ -273,37 +272,37 @@ let colorPaleta = {};
 function actualizarColoresJS() {
     const computed = getComputedStyle(document.body);
     colorPaleta = {
-        ui: computed.getPropertyValue('--color-ui').trim(),
-        head: computed.getPropertyValue('--color-head').trim(),
-        body: computed.getPropertyValue('--color-body').trim(),
-        apple: computed.getPropertyValue('--color-apple').trim(),
+        ui: computed.getPropertyValue('--color-ui').trim() || "#00fff2",
+        head: computed.getPropertyValue('--color-head').trim() || "#00fff2",
+        body: computed.getPropertyValue('--color-body').trim() || "rgb(0, 255, 136)",
+        apple: computed.getPropertyValue('--color-apple').trim() || "#ff0055",
     };
 }
 actualizarColoresJS();
 
 let tablaPosiciones = localStorage.getItem('snakeLeaderboard_v4') 
     ? JSON.parse(localStorage.getItem('snakeLeaderboard_v4')) 
-    : [ 
-        { name: "WRANKIE", score: 2500 },
-        { name: "SNAKE", score: 1400 }, 
-        { name: "GUTS", score: 1100 }, 
-        { name: "PLAYER", score: 300 }, 
-        { name: "NEWBIE", score: 100 }
-      ];
+    : [ { name: "WRANKIE", score: 2500 }, { name: "SNAKE", score: 1400 }, { name: "GUTS", score: 1100 }, { name: "PLAYER", score: 300 }, { name: "NEWBIE", score: 100 } ];
 
-// ✨ SISTEMA DE PARTÍCULAS
+// ✨ SISTEMA DE PARTÍCULAS EXPLOSIVAS Y RASTRO
 let particles = [];
 class Particle {
     constructor(x, y, color, tipo = 'normal') {
         this.x = x; this.y = y; this.color = color; this.tipo = tipo;
-        this.vx = (Math.random() - 0.5) * (tipo === 'fuego' ? 6 : 8); 
-        this.vy = (Math.random() - 0.5) * (tipo === 'fuego' ? 9 : 8) - (tipo === 'fuego' ? 2 : 0); 
-        this.life = 1.0; this.decay = Math.random() * 0.04 + 0.03;
+        if (tipo === 'trail') {
+            this.vx = (Math.random() - 0.5) * 0.8;
+            this.vy = (Math.random() - 0.5) * 0.8;
+            this.life = 0.8; this.decay = 0.05;
+        } else {
+            this.vx = (Math.random() - 0.5) * (tipo === 'fuego' ? 6 : 8); 
+            this.vy = (Math.random() - 0.5) * (tipo === 'fuego' ? 9 : 8) - (tipo === 'fuego' ? 2 : 0); 
+            this.life = 1.0; this.decay = Math.random() * 0.04 + 0.03;
+        }
     }
     update() { this.x += this.vx; this.y += this.vy; this.vx *= 0.96; this.life -= this.decay; }
     draw() {
         if (this.life <= 0) return;
-        ctx.save(); ctx.shadowBlur = 10 * this.life;
+        ctx.save(); ctx.shadowBlur = (this.tipo === 'trail' ? 5 : 10) * this.life;
         ctx.shadowColor = (this.tipo === 'fuego') ? `rgba(255, ${Math.floor(this.life*150)}, 0, 1)` : this.color;
         ctx.globalAlpha = this.life; ctx.fillStyle = ctx.shadowColor;
         ctx.fillRect(this.x, this.y, this.tipo === 'fuego' ? 4 : 3, this.tipo === 'fuego' ? 4 : 3); ctx.restore();
@@ -320,13 +319,8 @@ function sacudirTablero(tipo) {
     if (tipo === 'heavy') canvas.classList.add('shake-heavy');
 }
 
-function toggleLeaderboard() {
-    iniciarAudio(); estadoJuego = (estadoJuego === 'LEADERBOARD') ? 'INICIO' : 'LEADERBOARD';
-}
-
-function toggleShop() {
-    iniciarAudio(); estadoJuego = (estadoJuego === 'SHOP') ? 'INICIO' : 'SHOP';
-}
+function toggleLeaderboard() { iniciarAudio(); estadoJuego = (estadoJuego === 'LEADERBOARD') ? 'INICIO' : 'LEADERBOARD'; }
+function toggleShop() { iniciarAudio(); estadoJuego = (estadoJuego === 'SHOP') ? 'INICIO' : 'SHOP'; }
 
 function comprarItem(item, coste) {
     iniciarAudio();
@@ -403,16 +397,29 @@ function mostrarJuego() {
     }
     ctx.globalAlpha = 1;
 
-    if (estadoJuego === 'JUGANDO') {
+    // IA MODO DEMO INACTIVIDAD
+    if ((estadoJuego === 'INICIO' || estadoJuego === 'GAMEOVER') && (Date.now() - ultimoInputTime > 8000)) {
+        if (estadoJuego === 'GAMEOVER') reiniciarJuego();
+        estadoJuego = 'DEMO'; ultimoInputTime = Date.now();
+        clearTimeout(synthMusicToken); tocarPasoMusica(); 
+    }
+
+    if (estadoJuego === 'JUGANDO' || estadoJuego === 'DEMO') {
         if (frutaEspecial.active) { frutaEspecial.ticksLeft--; if (frutaEspecial.ticksLeft <= 0) frutaEspecial.active = false; }
         if (powerupActivo) { 
             powerupTicksLeft--; 
             if (powerupTicksLeft <= 0) { powerupActivo = null; ajustarVelocidadDinamica(); } 
         }
         if (comboMultiplicador > 1) { comboTicksLeft--; if (comboTicksLeft <= 0) comboMultiplicador = 1; }
+
+        let colorTrail = powerupActivo ? ((powerupActivo === 'banana') ? "#00d2ff" : "#ff3300") : (colorPaleta.body || "#00fff2");
+        let densidadChispas = (powerupActivo === 'chili' ? 3 : 1);
+        for (let k = 0; k < densidadChispas; k++) {
+            particles.push(new Particle(snake[0].x + 4 + Math.random()*12, snake[0].y + 4 + Math.random()*12, colorTrail, 'trail'));
+        }
     }
 
-    if (estadoJuego === 'JUGANDO' && comboMultiplicador > 1) {
+    if ((estadoJuego === 'JUGANDO' || estadoJuego === 'DEMO') && comboMultiplicador > 1) {
         ctx.save(); ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.ui; ctx.fillStyle = colorPaleta.ui; ctx.font = "italic bold 15px 'Segoe UI', Arial"; ctx.textAlign = "left";
         ctx.fillText(`COMBO X${comboMultiplicador}! 🔥`, 15, 30); ctx.restore();
     }
@@ -422,6 +429,8 @@ function mostrarJuego() {
     if (estadoJuego === 'GAMEOVER') { dibujarPantallaGameOver(); return; }
     if (estadoJuego === 'LEADERBOARD') { dibujarPantallaLeaderboard(); return; } 
     if (estadoJuego === 'SHOP') { dibujarPantallaTienda(); return; } 
+
+    if (estadoJuego === 'DEMO') calcularMovimientoIA();
 
     actualDx = dx; actualDy = dy;
     let newX = snake[0].x + dx; let newY = snake[0].y + dy;
@@ -445,7 +454,6 @@ function mostrarJuego() {
         puntuacion += gananciaPuntos;
         scoreText.innerText = puntuacion;
         sonarComer('normal'); sacudirTablero('light');
-        
         crearExplosionParticulas(apple.x, apple.y, colorPaleta.apple);
 
         let textoAlerta = comboMultiplicador > 1 ? `+${gananciaPuntos} X${comboMultiplicador}!` : `+${gananciaPuntos}`;
@@ -479,10 +487,46 @@ function mostrarJuego() {
     }
 }
 
+function calcularMovimientoIA() {
+    let head = snake[0]; let target = frutaEspecial.active ? frutaEspecial : apple;
+    let posiblesMovimientos = [
+        { dx: -20, dy: 0, x: head.x - 20, y: head.y }, { dx: 20, dy: 0, x: head.x + 20, y: head.y },
+        { dx: 0, dy: -20, x: head.x, y: head.y - 20 }, { dx: 0, dy: 20, x: head.x, y: head.y + 20 }
+    ];
+
+    let movimientosSeguros = posiblesMovimientos.filter(m => {
+        let testX = m.x; let testY = m.y;
+        if (modoJuego === 'PACMAN') {
+            testX = testX < 0 ? 380 : (testX >= 400 ? 0 : testX);
+            testY = testY < 0 ? 380 : (testY >= 400 ? 0 : testY);
+        } else {
+            if (testX < 0 || testX >= 400 || testY < 0 || testY >= 400) return false;
+        }
+
+        for (let i = 0; i < snake.length - 1; i++) { if (testX === snake[i].x && testY === snake[i].y) return false; }
+        if (chocoContraMuro(testX, testY)) return false;
+        if (m.dx === -actualDx && m.dy === -actualDy) return false;
+        
+        m.targetX = testX; m.targetY = testY;
+        return true;
+    });
+
+    if (movimientosSeguros.length === 0) movimientosSeguros = posiblesMovimientos;
+    
+    movimientosSeguros.sort((a, b) => { 
+        let ax = a.targetX !== undefined ? a.targetX : a.x;
+        let ay = a.targetY !== undefined ? a.targetY : a.y;
+        let bx = b.targetX !== undefined ? b.targetX : b.x;
+        let by = b.targetY !== undefined ? b.targetY : b.y;
+        return (Math.abs(ax - target.x) + Math.abs(ay - target.y)) - (Math.abs(bx - target.x) + Math.abs(by - target.y)); 
+    });
+
+    dx = movimientosSeguros[0].dx; dy = movimientosSeguros[0].dy;
+}
+
 function dibujarMuros() {
     if (murosNivel.length === 0) return;
-    ctx.save();
-    ctx.shadowBlur = 15; ctx.shadowColor = "#ff0055"; ctx.fillStyle = "#ff0055"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
+    ctx.save(); ctx.shadowBlur = 15; ctx.shadowColor = "#ff0055"; ctx.fillStyle = "#ff0055"; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2;
     for (const muro of murosNivel) { ctx.fillRect(muro.x, muro.y, muro.w, muro.h); ctx.strokeRect(muro.x, muro.y, muro.w, muro.h); }
     ctx.restore();
 }
@@ -492,8 +536,9 @@ function chocoContraMuro(x, y) {
 }
 
 function dispararGameOver() {
-    sacudirTablero('heavy'); sonarGameOver(); estadoJuego = 'GAMEOVER'; 
-    ultimoGameOverTime = Date.now(); evaluarLogroInmortal(); verificarYGuardarRecord();
+    sacudirTablero('heavy'); sonarGameOver(); ultimoGameOverTime = Date.now(); ultimoInputTime = Date.now();
+    if (estadoJuego === 'DEMO') { reiniciarJuego(); estadoJuego = 'DEMO'; } 
+    else { estadoJuego = 'GAMEOVER'; evaluarLogroInmortal(); verificarYGuardarRecord(); }
 }
 
 function ejecutarCadenaCombo() {
@@ -530,7 +575,6 @@ function generarFrutaEspecial() {
     frutaEspecial.ticksMax = Math.floor(6000 / velocidadActual); frutaEspecial.ticksLeft = frutaEspecial.ticksMax;
 }
 
-// 🎨 DIBUJO DIRECTO A VELOCIDAD NATURAL (Corregido apple.y + 10)
 function dibujarManzana() {
     ctx.save(); ctx.shadowBlur = (powerupActivo === 'chili') ? 25 : 15; ctx.shadowColor = colorPaleta.apple; ctx.fillStyle = colorPaleta.apple;
     ctx.beginPath(); ctx.arc(apple.x + 10, apple.y + 10, 9, 0, 2 * Math.PI); ctx.fill(); ctx.restore();
@@ -546,41 +590,45 @@ function dibujarFrutaEspecial() {
     ctx.arc(frutaEspecial.x + 10, frutaEspecial.y + 10, 13, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * porcentajeTiempo)); ctx.stroke(); ctx.restore();
 }
 
+// 🎨 DIBUJO CON OPACIDAD POR CAPAS (Solución anti-suicidio de cola integrada)
 function dibujarSerpiente() {
     ctx.shadowBlur = 15;
     for (let i = 0; i < snake.length; i++) {
         if (i === 0) {
+            ctx.globalAlpha = 1;
             if (skinEquipada) { ctx.fillStyle = "#ffe600"; ctx.shadowColor = "#ffe600"; } 
-            else { ctx.fillStyle = powerupActivo ? ((powerupActivo === 'banana') ? "#00d2ff" : "#ff3300") : colorPaleta.head; ctx.shadowColor = ctx.fillStyle; }
+            else { ctx.fillStyle = powerupActivo ? ((powerupActivo === 'banana') ? "#00d2ff" : "#ff3300") : (colorPaleta.head || "#00fff2"); ctx.shadowColor = ctx.fillStyle; }
         } else {
             let opacidad = 1 - (i / snake.length) * 0.65;
+            ctx.globalAlpha = opacidad; 
+            
             if (colaDegradadaEquipada && !powerupActivo) {
-                let ratio = i / snake.length;
-                let r, g, b;
-                if (document.body.classList.contains('theme-matrix')) {
-                    r = Math.floor(50 * (1 - ratio) + 0 * ratio); g = Math.floor(205 * (1 - ratio) + 60 * ratio); b = Math.floor(50 * (1 - ratio) + 0 * ratio);
-                } else if (document.body.classList.contains('theme-synthwave')) {
-                    r = Math.floor(255 * (1 - ratio) + 128 * ratio); g = Math.floor(110 * (1 - ratio) + 0 * ratio); b = Math.floor(0 * (1 - ratio) + 128 * ratio);
-                } else {
-                    r = Math.floor(0 * (1 - ratio) + 255 * ratio); g = Math.floor(255 * (1 - ratio) + 0 * ratio); b = Math.floor(136 * (1 - ratio) + 255 * ratio);
-                }
-                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${opacidad})`; ctx.shadowColor = `rgb(${r}, ${g}, ${b})`;
+                let ratio = i / snake.length; let r, g, b;
+                if (document.body.classList.contains('theme-matrix')) { r = Math.floor(50 * (1 - ratio) + 0 * ratio); g = Math.floor(205 * (1 - ratio) + 60 * ratio); b = Math.floor(50 * (1 - ratio) + 0 * ratio); } 
+                else if (document.body.classList.contains('theme-synthwave')) { r = Math.floor(255 * (1 - ratio) + 128 * ratio); g = Math.floor(110 * (1 - ratio) + 0 * ratio); b = Math.floor(0 * (1 - ratio) + 128 * ratio); } 
+                else { r = Math.floor(0 * (1 - ratio) + 255 * ratio); g = Math.floor(255 * (1 - ratio) + 0 * ratio); b = Math.floor(136 * (1 - ratio) + 255 * ratio); }
+                ctx.fillStyle = `rgb(${r}, ${g}, ${b})`; ctx.shadowColor = `rgb(${r}, ${g}, ${b})`;
             } else {
-                ctx.fillStyle = colorPaleta.body.replace(')', `, ${opacidad})`); ctx.shadowColor = colorPaleta.body;
+                ctx.fillStyle = colorPaleta.body || "#00ff88"; ctx.shadowColor = colorPaleta.body || "#00ff88";
             }
         }
         ctx.fillRect(snake[i].x + 1, snake[i].y + 1, 18, 18);
         if (i === 0 && skinEquipada) {
-            ctx.fillStyle = "#ffaa00"; ctx.fillRect(snake[0].x + 4, snake[0].y - 3, 3, 4); ctx.fillRect(snake[0].x + 12, snake[0].y - 3, 3, 4); ctx.fillRect(snake[0].x + 8, snake[0].y - 1, 4, 3);
+            ctx.globalAlpha = 1; ctx.fillStyle = "#ffaa00"; 
+            ctx.fillRect(snake[0].x + 4, snake[0].y - 3, 3, 4); ctx.fillRect(snake[0].x + 12, snake[0].y - 3, 3, 4); ctx.fillRect(snake[0].x + 8, snake[0].y - 1, 4, 3);
         }
     }
+    ctx.globalAlpha = 1; 
 }
 
 function dibujarPantallaInicio() {
-    ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.ui; ctx.fillStyle = "rgba(10, 10, 20, 0.85)"; ctx.fillRect(30, 130, 340, 130);
-    ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.ui; ctx.font = "bold 15px 'Segoe UI', Arial"; ctx.textAlign = "center";
-    ctx.fillText("PULSA ESPACIO O EL DPAD", canvas.width / 2, 175); ctx.fillText("PARA EMPEZAR EL JUEGO 🎮", canvas.width / 2, 205);
-    ctx.fillStyle = "#e200ff"; ctx.font = "bold 12px 'Segoe UI', Arial"; ctx.fillText(`CRÉDITOS NEÓN: ${creditosNeon} 💎`, canvas.width / 2, 240);
+    ctx.shadowBlur = 10; ctx.shadowColor = colorPaleta.ui || "#00fff2"; 
+    ctx.fillStyle = "rgba(10, 10, 20, 0.85)"; ctx.fillRect(30, 130, 340, 130);
+    ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.ui || "#00fff2"; 
+    ctx.font = "bold 15px 'Segoe UI', Arial"; ctx.textAlign = "center";
+    ctx.fillText("PULSA ESPACIO O EL DPAD", canvas.width / 2, 165); ctx.fillText("PARA EMPEZAR EL JUEGO 🎮", canvas.width / 2, 195);
+    ctx.fillStyle = "#ffaa00"; ctx.font = "italic 11px Arial"; ctx.fillText("IA en modo Demo se activa tras 8s de espera 🤖", canvas.width / 2, 220);
+    ctx.fillStyle = "#e200ff"; ctx.font = "bold 12px 'Segoe UI', Arial"; ctx.fillText(`CRÉDITOS NEÓN: ${creditosNeon} 💎`, canvas.width / 2, 245);
 }
 
 function dibujarPantallaPausa() {
@@ -633,9 +681,9 @@ function dibujarPantallaLeaderboard() {
 }
 
 function dibujarPantallaGameOver() {
-    ctx.shadowBlur = 15; ctx.shadowColor = colorPaleta.apple; ctx.fillStyle = "rgba(15, 10, 25, 0.95)"; ctx.strokeStyle = colorPaleta.apple; ctx.lineWidth = 3;
+    ctx.shadowBlur = 15; ctx.shadowColor = colorPaleta.apple || "#ff0055"; ctx.fillStyle = "rgba(15, 10, 25, 0.95)"; ctx.strokeStyle = colorPaleta.apple || "#ff0055"; ctx.lineWidth = 3;
     ctx.fillRect(30, 20, 340, 360); ctx.strokeRect(30, 20, 340, 360);
-    ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.apple; ctx.font = "bold 24px 'Segoe UI', Arial"; ctx.textAlign = "center";
+    ctx.shadowBlur = 0; ctx.fillStyle = colorPaleta.apple || "#ff0055"; ctx.font = "bold 24px 'Segoe UI', Arial"; ctx.textAlign = "center";
     ctx.fillText("¡GAME OVER! 😵", canvas.width / 2, 50);
     ctx.fillStyle = "#fff"; ctx.font = "14px 'Segoe UI', Arial";
     let monedasGanadas = Math.floor(puntuacion / 10);
@@ -646,7 +694,7 @@ function dibujarPantallaGameOver() {
     for (let i = 0; i < 5; i++) {
         let jugador = tablaPosiciones[i] || { name: "----------", score: 0 };
         let yPos = 140 + (i * 26);
-        ctx.fillStyle = (jugador.score === puntuacion && jugador.score > 0) ? colorPaleta.ui : "#fff";
+        ctx.fillStyle = (jugador.score === puntuacion && jugador.score > 0) ? (colorPaleta.ui || "#00fff2") : "#fff";
         let puesto = i + 1;
         let textoFila = `${puesto}. ${jugador.name.padEnd(11, '.')} ${String(jugador.score).padStart(4, '0')} PTS`;
         ctx.fillText(textoFila, canvas.width / 2 - 140, yPos); 
@@ -679,6 +727,12 @@ function verificarYGuardarRecord() {
     }
 }
 
+// 🤖 FIX: El lazo condicional de la cola se ha corregido (`snake.length - 1`) para evitar muertes falsas persiguiendo tu propio final
+function chocoConsigoMisma(x, y) {
+    for (let i = 1; i < snake.length - 1; i++) { if (x === snake[i].x && y === snake[i].y) return true; }
+    return false;
+}
+
 function conectarYEscucharNube() {
     firebase.database().ref('leaderboard').orderByChild('score').limitToLast(5).on('value', (snapshot) => {
         let lista = []; snapshot.forEach((child) => { lista.push(child.val()); });
@@ -689,6 +743,14 @@ function conectarYEscucharNube() {
 
 function cambiarDireccion(elemento) {
     const tecla = typeof elemento === 'string' ? elemento : elemento.key;
+    
+    if (estadoJuego === 'DEMO') {
+        if ([' ', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'p', 'P'].includes(tecla)) {
+            reiniciarJuego(); estadoJuego = 'INICIO'; ultimoInputTime = Date.now(); return;
+        }
+    }
+
+    ultimoInputTime = Date.now();
 
     if (estadoJuego === 'SHOP') {
         if (tecla === '1') { if(!tiendaInventario.skinCorona) comprarItem('skinCorona', 30); else equiparItem('skin'); mostrarJuego(); return; }
@@ -707,15 +769,15 @@ function cambiarDireccion(elemento) {
         if (Date.now() - ultimoGameOverTime < 400) return;
         if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) { 
             estadoJuego = 'JUGANDO'; reiniciarJuego(); 
-        }
-        return;
+            if (tecla === ' ') return; 
+        } else { return; }
     }
     
     if (estadoJuego === 'INICIO') {
         if (tecla === ' ' || ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(tecla)) { 
             iniciarAudio(); estadoJuego = 'JUGANDO'; clearTimeout(synthMusicToken); tocarPasoMusica(); 
-        }
-        return;
+            if (tecla === ' ') return; 
+        } else { return; }
     }
     
     if (tecla === 'p' || tecla === 'P' || tecla === 'Escape') { togglePausa(); return; }
@@ -728,24 +790,22 @@ function cambiarDireccion(elemento) {
 }
 
 canvas.addEventListener('click', (e) => {
+    ultimoInputTime = Date.now(); 
+    if (estadoJuego === 'DEMO') { reiniciarJuego(); estadoJuego = 'INICIO'; return; }
     if (estadoJuego !== 'SHOP') return;
     const rect = canvas.getBoundingClientRect(); const scaleY = 400 / rect.height; const clickY = (e.clientY - rect.top) * scaleY;
     if (clickY >= 110 && clickY <= 150) { if(!tiendaInventario.skinCorona) comprarItem('skinCorona', 30); else equiparItem('skin'); }
-    if (clickY >= 170 && clickY <= 210) { if(!tiendaInventario.particulaFuego) fancy = comprarItem('particulaFuego', 50); else equiparItem('particula'); }
+    // 🎯 FIX: Eliminación completa de la asignación de variable muerta "fancy" en los eventos táctiles
+    if (clickY >= 170 && clickY <= 210) { if(!tiendaInventario.particulaFuego) comprarItem('particulaFuego', 50); else equiparItem('particula'); }
     if (clickY >= 230 && clickY <= 270) { if(!tiendaInventario.colaDegradada) comprarItem('colaDegradada', 70); else equiparItem('cola'); }
     mostrarJuego();
 });
 
 function togglePausa() {
-    if (estadoJuego === 'INICIO' || estadoJuego === 'GAMEOVER' || estadoJuego === 'LEADERBOARD' || estadoJuego === 'SHOP') return; 
-    iniciarAudio();
+    if (estadoJuego === 'INICIO' || estadoJuego === 'GAMEOVER' || estadoJuego === 'LEADERBOARD' || estadoJuego === 'SHOP' || estadoJuego === 'DEMO') return; 
+    iniciarAudio(); ultimoInputTime = Date.now();
     if (estadoJuego === 'JUGANDO') { estadoJuego = 'PAUSA'; document.getElementById('pauseBtn').innerText = "▶️"; } 
     else if (estadoJuego === 'PAUSA') { estadoJuego = 'JUGANDO'; document.getElementById('pauseBtn').innerText = "⏸️"; clearTimeout(synthMusicToken); tocarPasoMusica(); }
-}
-
-function chocoConsigoMisma(x, y) {
-    for (let i = 1; i < snake.length; i++) { if (x === snake[i].x && y === snake[i].y) return true; }
-    return false;
 }
 
 function generarNuevaManzana() {
@@ -761,7 +821,10 @@ function reiniciarJuego() {
     puntuacion = 0; manzanasNormalesContador = 0; wrapAroundContador = 0; comboMultiplicador = 1; velocidadActual = VELOCIDAD_INICIAL;
     murosNivel = []; floatingTexts = []; 
     powerupActivo = null; frutaEspecial.active = false; scoreText.innerText = puntuacion; document.getElementById('pauseBtn').innerText = "⏸️";
-    snake = [{ x: 160, y: 160 }, { x: 140, y: 160 }, { x: 120, y: 160 }]; dx = 20; dy = 0; particles = [];
+    dx = 20; dy = 0; 
+    // 🎯 FIX: Se fuerzan el reseteo de actualDx y actualDy a los valores por defecto del arranque limpio
+    actualDx = 20; actualDy = 0; 
+    snake = [{ x: 160, y: 280 }, { x: 140, y: 280 }, { x: 120, y: 280 }]; particles = [];
     generarNuevaManzana(); clearTimeout(synthMusicToken); tocarPasoMusica();
 }
     </script>
